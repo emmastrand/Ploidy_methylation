@@ -136,14 +136,14 @@ df5x %>%
   filter(!is.na(per.meth)) %>% dplyr::select(-per.meth) %>%
   filter(!Sample.ID == "1225") %>% 
   filter(!Sample.ID == "2197") %>%
-  distinct() %>% write.csv("data/WGBS/output/meth_pattern_groups.csv")
+  distinct() %>% write.csv("data/metadata/meth_pattern_groups.csv")
 ```
 
 ## Binomial GLM to test for differentially methylated genes
 
 ### Filter for genes with >5 methylated positions
 
-Come back to this value of a cut off of 5 methylated positions per gene.. Does this need to be higher? Test cut offs.
+Come back to this value of a cut off of 5 methylated positions per gene. 
 
 ```{r}
 meth_table5x <- df5x
@@ -155,12 +155,6 @@ meth_table5x_position_counts <- dplyr::count(meth_table5x, vars = c(sample_gene)
 meth_table5x_position_counts <- meth_table5x_position_counts[which(meth_table5x_position_counts$n > 5), ]
 
 meth_table5x_filtered <- meth_table5x[meth_table5x$sample_gene %in% meth_table5x_position_counts$vars,]
-meth_table5x_filtered %>% write.csv("data/WGBS/output/allgenes5x_filtered.csv")
-```
-
-```{r}
-meth_table5x_filtered <- read.csv("data/WGBS/output/allgenes5x_filtered.csv") %>% 
-  dplyr::select(-X) %>% distinct()
 ```
 
 ### Run loop for GLM 
@@ -204,8 +198,6 @@ Export df created. Run the read.csv() function below the export code to read bac
 
 ```{r}
 results5x %>% write.csv("data/WGBS/output/results5x_methgroup.csv") #9,647 genes - this should match length of gs5x
-#results5x %>% write.csv("data/WGBS/output/results5x_ploidy.csv") #9,647 genes - this should match length of gs5x
-#results5x %>% write.csv("data/WGBS/output/results5x_treesplit.csv") #9,647 genes - this should match length of gs5x
 
 results5x <- read.csv("data/WGBS/output/results5x_methgroup.csv", header = TRUE) %>% 
   dplyr::select(-X) %>% distinct() ## distinct() necessary in case the model above went through multiple times

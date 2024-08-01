@@ -1,0 +1,16 @@
+---
+title: "Filtering differentially methylated genes"
+author: "EL Strand"
+output:
+  github_document: default
+  pdf_document:
+    keep_tex: yes
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Differentially Methylated Genes 
