@@ -1,5 +1,5 @@
 ---
-title: "Differentially methylated genes - Pacuta"
+title: "Identifying differentially methylated genes"
 author: "EL Strand"
 output:
   github_document: default
@@ -42,8 +42,6 @@ library(gridExtra)
 library(seacarb) 
 library(pheatmap)
 library(tidyr)
-library(goseq)
-library(genefilter)
 library(gplots)
 library(cowplot)
 library(lsmeans)
@@ -61,36 +59,9 @@ library(vegan)
 library(Rmisc)
 ```
 
-## Load all data files 
+## Load DNA methylation files 
 
-### P. acuta annotation from Rutgers 
-
-http://cyanophora.rutgers.edu/Pocillopora_acuta/
-
-GO Slim filed created from GOSlim.Rmd script in same repo. 
-
-```{r}
-eggNOGG <- read.delim(file = "data/Pocillopora_acuta_HIv2.genes.EggNog_results.txt",
-                      sep = "\t", header=TRUE) %>% dplyr::rename(gene = X.query)
-```
-
-### CpG OE calculated from prior scripts 
-
-Generated in this script: https://github.com/emmastrand/EmmaStrand_Notebook/blob/master/_posts/2022-11-19-CpG-OE-Analysis-for-DNA-Methylation.md
-
-```{r}
-OE <- read.csv(file = "data/WGBS/Pacuta_CpGOE_full.csv", sep = ",",
-                 header = TRUE) %>% dplyr::rename(gene = Gene)
-
-# there is a space after each gene name.. get rid of. This was some error in CpG_OE.Rmd script 
-OE$gene <- gsub(" ","",OE$gene)
-
-#merge with annotation information
-gene_meta <- dplyr::full_join(eggNOGG, OE, by = "gene")  
-OE_NA <- gene_meta %>% subset(.,is.na(status)) ##26 genes found with no CpG O/E calculated (this gene was not in genome but in gff)
-```
-
-### DNA methylation files 
+Below commands were only run use to produce data file and then not run again for computational purposes.
 
 ```{r}
 # meth5x <- list.files(path = "data/WGBS/output/meth_counts_5x", 
@@ -104,79 +75,18 @@ OE_NA <- gene_meta %>% subset(.,is.na(status)) ##26 genes found with no CpG O/E 
 # meth5x$Sample.ID <- gsub("data/WGBS/output/meth_counts_5x/","",meth5x$Sample.ID) #remove extra characters
 # meth5x$Sample.ID <- gsub("_5x_sorted.tab_gene_CpG_5x_enrichment.bed","",meth5x$Sample.ID) #remove extra characters 
 # meth5x$Sample.ID <- as.character(meth5x$Sample.ID)
-# 
-# meth10x <- list.files(path = "data/WGBS/output/meth_counts_10x", 
-#                      pattern = ".bed$", full.names=TRUE) %>% set_names(.) %>%
-#   map_dfr(read.csv,.id="Sample.ID", header=FALSE, sep="\t", na.string="NA", stringsAsFactors = FALSE) %>%
-#   dplyr::select(-c(V3,V7:V14)) 
-# 
-# colnames(meth10x) <- c("Sample.ID", "scaffold", "position","per.meth","meth","unmeth","gene")
-# meth10x$gene <- gsub("ID=","",meth10x$gene) #remove extra characters
-# meth10x$gene <- gsub("Parent=","",meth10x$gene) #remove extra characters
-# meth10x$Sample.ID <- gsub("data/WGBS/output/meth_counts_10x/","",meth10x$Sample.ID) #remove extra characters
-# meth10x$Sample.ID <- gsub("_10x_sorted.tab_gene_CpG_10x_enrichment.bed","",meth10x$Sample.ID) #remove extra characters 
-# meth10x$Sample.ID <- as.character(meth10x$Sample.ID)
 ```
 
-##### all.bed files 
-
-Do triploids have consistently methylated positions that aren't in diploids?
+Load df created in code above 
 
 ```{r}
-# meth5x_all <- list.files(path = "data/WGBS/output/meth_counts_5x",
-#                      pattern = "all.bed$", full.names=TRUE) %>% set_names(.) %>%
-#   map_dfr(read.csv,.id="Sample.ID", header=FALSE, sep="\t", na.string="NA", stringsAsFactors = FALSE) %>%
-#   dplyr::select(-c(V3,V7:V14))
-# 
-# colnames(meth5x_all) <- c("Sample.ID", "scaffold", "position","per.meth","meth","unmeth","gene")
-# meth5x_all$gene <- gsub("ID=","",meth5x_all$gene) #remove extra characters
-# meth5x_all$gene <- gsub("Parent=","",meth5x_all$gene) #remove extra characters
-# meth5x_all$Sample.ID <- gsub("data/WGBS/output/meth_counts_5x/","",meth5x_all$Sample.ID) #remove extra characters
-# meth5x_all$Sample.ID <- gsub("_5x_sorted.tab_gene_CpG_5x_all.bed","",meth5x_all$Sample.ID) #remove extra characters
-# meth5x_all$Sample.ID <- as.character(meth5x_all$Sample.ID)
-# 
-# df5xall <- full_join(meth5x_all, meta, by = "Sample.ID") %>%
-#   subset(!group == "Group7" & !group == "Ungroup") %>%
-#   mutate(meth_exp_group = case_when(
-#     group == "Group1" ~ "T1",
-#     group == "Group2" ~ "T1",
-#     group == "Group3" ~ "T2",
-#     group == "Group4" ~ "T2",
-#     group == "Group5" ~ "D",
-#     group == "Group6" ~ "D")) %>% 
-#   filter(!Sample.ID == "1225") %>% 
-#   filter(!Sample.ID == "2197")
-# 
-# meth_table_all5x <- df5xall
-# meth_table_all5x$sample_gene <- paste0(meth_table_all5x$Sample.ID, meth_table_all5x$gene)
-# 
-# meth_table5x_position_countsall <- dplyr::count(meth_table_all5x, vars = c(sample_gene))
-# meth_table5x_position_countsall <- meth_table5x_position_countsall[which(meth_table5x_position_countsall$n > 5), ]
-# 
-# meth_table5x_filteredall <- meth_table_all5x[meth_table_all5x$sample_gene %in% meth_table5x_position_countsall$vars,]
-# 
-# meth_table5x_filteredall2 <- meth_table5x_filteredall %>% 
-#   group_by(position) %>%
-#   mutate(position.median = median(per.meth)) %>%
-#   filter(!position.median < 10) %>% ungroup()
-# 
-# ## average number of unique positions per sample: dip vs trip
-
+load("data/WGBS/meth5x.RData")
 ```
-
-
-
-```{r}
-# save(meth5x, file = "data/WGBS/output/meth5x.RData")
-# save(meth10x, file = "data/WGBS/output/meth10x.RData")
-load(file="data/WGBS/output/meth5x.RData")
-```
-
 
 ### Metadata files 
 
 ```{r}
-meta <- read.csv("data/Molecular_metadata.csv") %>%
+meta <- read.csv("data/metadata/Molecular_metadata.csv") %>%
   mutate(Timepoint = if_else(Plug_ID == "2153", "12 hour", Timepoint)) %>%
   dplyr::rename(Sample.ID = Plug_ID) %>% 
   dplyr::select(Sample.ID, Species, Tank, Treatment, Temperature, CO2, Timepoint, Sample.Date) 
@@ -188,11 +98,11 @@ meta$Timepoint <- factor(meta$Timepoint,
                                       "1 week", "2 week", "4 week", "6 week",
                                       "8 week", "12 week", "16 week"))
 
-pacuta_clade <- read.delim2("data/clade_annotations_Pacuta.txt", header = TRUE, sep="\t") %>%
+pacuta_clade <- read.delim2("data/metadata/clade_annotations_Pacuta.txt", header = TRUE, sep="\t") %>%
   separate(., Sample, c("Species", "Treatment", "Timepoint", "Sample.ID")) %>% 
   dplyr::select(-Treatment, -Timepoint) %>% dplyr::select(Sample.ID, Clade)
 
-ploidyinfo <- read.delim2("data/samples_Pacuta.annotations.txt", 
+ploidyinfo <- read.delim2("data/metadata/samples_Pacuta.annotations.txt", 
                           header=TRUE, sep="\t", na.strings=c("","NA")) %>% 
   dplyr::rename(., Sample.ID = plugid) %>% 
   mutate_if(is.integer, as.character) %>% 
