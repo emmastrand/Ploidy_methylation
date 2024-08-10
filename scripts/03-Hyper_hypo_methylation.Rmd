@@ -1,0 +1,124 @@
+---
+title: "Hyper and hypo- methylated genes"
+author: "EL Strand"
+output:
+  github_document: default
+  pdf_document:
+    keep_tex: yes
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Differentially Methylated Genes Statistics 
+
+load zscore Rdata
+
+## Calculating z-score and hypermethylayed / hypomethylated groups 
+
+```{r}
+
+
+##sample order of heatmap 
+colInd_df <- as.data.frame(heatmap_df$colInd)
+sample_order <- All_data %>% select(-gene) %>%
+  gather(., "Sample.ID", "value", 1:51) %>% select(-value) %>% distinct()
+sample_order$`heatmap_df$colInd` <- c(1:51)
+colInd_df <- left_join(colInd_df, sample_order, by="heatmap_df$colInd") 
+sample_ploidyinfo <- gene.stats %>% select(Sample.ID, meth_exp_group) %>% distinct()
+sample_ploidyinfo$Sample.ID <- as.character(sample_ploidyinfo$Sample.ID)
+colInd_df <- left_join(colInd_df, sample_ploidyinfo, by = "Sample.ID")
+
+# saving gene row ids to match to name and z score above 
+rowInd_df <- as.data.frame(heatmap_df$rowInd)
+rowInd_df$gene <- c(1:1447)
+rowInd_df$gene <- paste0("V", rowInd_df$gene)
+
+## testing z score output to double check order of the gene names above 
+## number below is the first row under rowInd above
+test <- All_data[1145,] 
+test <- test %>% gather("Sample.ID", "value", 2:4) %>% na.omit() ##2:4 for meth_exp_group
+test <- test %>% mutate(mean = mean(value),
+                        stdev = sd(value),
+                        zscore = (value-mean)/stdev)
+## confirmed that V1 is the first row of rowInd_df which is row 642 in All_data  
+## next steps is to bind rowInd_df with the row id and then the gene name from All_data
+All_data_gene_names <- All_data 
+All_data_gene_names$rowInd <- c(1:1447)
+#All_data_gene_names$rowInd <- as.character(All_data_gene_names$rowInd)
+
+zscore_modified <- zscore_df %>% 
+  rownames_to_column(., var = "meth_exp_group") %>% na.omit() %>%
+  gather("gene", "zscore", 2:1448) %>%
+  left_join(., rowInd_df, by = "gene") %>%
+  dplyr::rename(., rowInd = `heatmap_df$rowInd`) %>%
+  left_join(., All_data_gene_names, by = ("rowInd")) %>% #select(-c(6:58)) %>%
+  dplyr::rename(., gene_number = gene.x) %>%
+  dplyr::rename(., gene = gene.y) %>% #left_join(., ploidyinfo, by=c("Sample.ID")) %>%
+  # mutate(meth_exp_group = case_when(
+  #   group == "Group1" ~ "T1",
+  #   group == "Group2" ~ "T1",
+  #   group == "Group3" ~ "T2",
+  #   group == "Group4" ~ "T2",
+  #   group == "Group5" ~ "D",
+  #   group == "Group6" ~ "D"
+  # )) %>%
+  dplyr::rename(meth_D = D) %>%
+  dplyr::rename(meth_T1 = T1) %>%
+  dplyr::rename(meth_T2 = T2) %>%
+  spread(meth_exp_group, zscore)
+zscore_modified$rowInd <- as.character(zscore_modified$rowInd)
+## now I can subset to the conditions I want 
+
+# Genes that are hypermethylated in Triploidy 2 (and not in Triploidy 1 or Diploidy) = 122 genes
+hypermeth_trip2 <- zscore_modified %>% filter(T2 > 1) 
+# Genes that are hypermethylated in Triploidy 1 (and not in Triploidy 2 or Diploidy)  = 138 genes
+hypermeth_trip1 <- zscore_modified %>% filter(T1 > 1) 
+# Genes that are hypermethylated in Diploidy (and not in Triploidy 2 or Triploidy 1)  = 460 genes
+hypermeth_dip <- zscore_modified %>% filter(D > 1) 
+
+hypermeth_trip2 %>% write.csv("data/WGBS/output/DMG_hypermeth_triploidy2.csv")
+hypermeth_trip1 %>% write.csv("data/WGBS/output/DMG_hypermeth_triploidy1.csv")
+hypermeth_dip %>% write.csv("data/WGBS/output/DMG_hypermeth_diploidy.csv")
+
+hypermeth_trip2 <- read.csv("data/WGBS/output/DMG_hypermeth_triploidy2.csv")
+hypermeth_trip1 <- read.csv("data/WGBS/output/DMG_hypermeth_triploidy1.csv")
+hypermeth_dip <- read.csv("data/WGBS/output/DMG_hypermeth_diploidy.csv")
+```
+
+Plotting the hypermeth levels above 
+
+```{r}
+#hypermeth_trip2_plot <- hypermeth_trip2 %>% 
+#hypermeth_trip1_plot <- hypermeth_trip1 %>% 
+hypermeth_dip_plot <- hypermeth_dip %>% 
+  dplyr::select(gene, meth_D, meth_T1, meth_T2) %>%
+  gather("meth_exp_group", "per.meth", 2:4) %>%
+    # mutate(loci_status = case_when(
+    #       per.meth <= 10 ~ "unmethylated",
+    #       per.meth > 10 & per.meth < 50 ~ "sparsely methylated",
+    #       per.meth >= 50 ~ "methylated")) %>%
+  ggplot(., aes(x=meth_exp_group, y=per.meth, color=meth_exp_group)) + theme_bw() + xlab("") +
+  geom_boxplot() + geom_jitter(size=1, alpha=0.3, width=0.2) + 
+  #facet_wrap(~loci_status, scales = "free_y") +
+  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+  theme(strip.text.x = element_text(size = 10, color = "black", face = "bold"),
+        strip.text.y = element_text(size = 10, color = "black", face = "bold")) +
+  theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
+
+ggsave(filename="data/WGBS/output/figures/hypermeth_dip.jpeg", 
+       plot=hypermeth_dip_plot, dpi=300, width=4, height=3, units="in")
+
+## statistics on the above 
+hypermeth_stats <- hypermeth_trip2 %>% 
+  dplyr::select(gene, meth_D, meth_T1, meth_T2) %>%
+  gather("meth_exp_group", "per.meth", 2:4)
+
+aov <- aov(per.meth ~ meth_exp_group, data=hypermeth_stats)
+summary(aov)
+TukeyHSD(aov)
+```
+

@@ -254,8 +254,6 @@ DMG_5x_sig %>% write.csv("data/WGBS/DMG_5x_sig_methgroup.csv")
 - `DMG_5x_sig / DMG_5x_sig` = only adjusted pvalues from the results 5
   and 10x dfs
 
-### Adding “loci status” to each loci as a category and filtering to only significant DMGs
-
 ``` r
 meth_table5x_filtered <- meth_table5x_filtered %>% 
   mutate(loci_status = case_when(
@@ -576,6 +574,8 @@ length(unique(meth_table5x_filtered2_sigDMG$gene)) ##1,447 genes left
     ## [1] 1447
 
 ``` r
+save(meth_table5x_filtered_sigDMG, file = "data/WGBS/meth_table5x_filtered_sigDMG.RData")
+save(meth_table5x_filtered, file = "data/WGBS/meth_table5x_filtered.RData")
 save(meth_table5x_filtered2, file = "data/WGBS/meth_table5x_filtered2.RData")
 save(meth_table5x_filtered2_sigDMG, file = "data/WGBS/meth_table5x_filtered2_sigDMG.RData")
 ```

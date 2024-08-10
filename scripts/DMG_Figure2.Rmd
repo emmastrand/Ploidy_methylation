@@ -151,18 +151,7 @@ dev.off()
 
 Putting altogether 
 
-```{r}
-fig2_plots <- plot_grid(treatment_pca, ploidy_pca, fig2C,
-          labels=c("A)", "B)", "C)"), 
-          nrow=3, ncol=1,
-          align="v", 
-          axis=c("lrtb"),
-          rel_widths = c(2, 2, 2),
-          rel_heights = c(2,2,1.7),
-          label_size = 18)
 
-ggsave("data/WGBS/output/figures/Fig2.jpeg", fig2_plots, width = 5, height = 10)
-```
 
 
 
