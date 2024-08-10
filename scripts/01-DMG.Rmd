@@ -163,7 +163,6 @@ Create data frame to store results
 
 ```{r}
 results5x <- data.frame()
-results10x <- data.frame()
 ```
 
 First subset the unique dataframes and second run the GLMs
@@ -175,29 +174,29 @@ gs5x <- unique(meth_table5x_filtered$gene)
 #### 5x loop
 
 ```{r}
-for(i in 1:length(meth_table5x_filtered$gene)){
-    
-    #subset the dataframe gene by gene
-    meth_table_filt1 <- subset(meth_table5x_filtered, gene ==gs5x[1])
-    
-    # fit glm position model
-    fit2 <- glm(matrix(c(meth, unmeth), ncol=2) ~ meth_exp_group, 
-               data=meth_table_filt1, family=binomial)
-    a2 <- anova(fit2, test="LRT")
-
-    # capture summary stats to data frame
-    df2 <- data.frame(gene = meth_table_filt1[1,7], ###for treesplit [1,8] or at least double check this
-                     pval.methgroup = a2$`Pr(>Chi)`[2],
-                     stringsAsFactors = F)
-    # bind rows of temporary data frame to the results data frame
-    results5x <- rbind(results5x, df2)
-}
+# for(i in 1:length(meth_table5x_filtered$gene)){
+#     
+#     #subset the dataframe gene by gene
+#     meth_table_filt1 <- subset(meth_table5x_filtered, gene ==gs5x[1])
+#     
+#     # fit glm position model
+#     fit2 <- glm(matrix(c(meth, unmeth), ncol=2) ~ meth_exp_group, 
+#                data=meth_table_filt1, family=binomial)
+#     a2 <- anova(fit2, test="LRT")
+# 
+#     # capture summary stats to data frame
+#     df2 <- data.frame(gene = meth_table_filt1[1,7], ###for treesplit [1,8] or at least double check this
+#                      pval.methgroup = a2$`Pr(>Chi)`[2],
+#                      stringsAsFactors = F)
+#     # bind rows of temporary data frame to the results data frame
+#     results5x <- rbind(results5x, df2)
+# }
 ```
 
 Export df created. Run the read.csv() function below the export code to read back in those df. When running the script multiple times, you don't need to run the binomial function above. Skip that code and just read in results5x or 10x df. 
 
 ```{r}
-results5x %>% write.csv("data/WGBS/results5x_methgroup.csv") #9,647 genes - this should match length of gs5x
+#results5x %>% write.csv("data/WGBS/results5x_methgroup.csv") #9,647 genes - this should match length of gs5x
 
 results5x <- read.csv("data/WGBS/results5x_methgroup.csv", header = TRUE) %>% 
   dplyr::select(-X) %>% distinct() ## distinct() necessary in case the model above went through multiple times
@@ -271,7 +270,7 @@ histall <- meth_table5x_filtered %>%
         strip.text.y = element_text(size = 12, color = "black", face = "bold")) +
   theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
 
-ggsave(filename="data/figures/Percent_methylation_all.jpeg", width=8, height=7, units="in")
+ggsave(filename="data/figures/Loci_Percent_methylation_all.jpeg", width=8, height=7, units="in")
 
 ## hist for per.meth distribution for significant DMGs 
 histDMG <- meth_table5x_filtered_sigDMG %>%
@@ -284,7 +283,7 @@ histDMG <- meth_table5x_filtered_sigDMG %>%
         strip.text.y = element_text(size = 12, color = "black", face = "bold")) +
   theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
 
-ggsave(filename="data/figures/Percent_methylation_sigDMGs.jpeg", width=8, height=7, units="in")
+ggsave(filename="data/figures/Loci_Percent_methylation_sigDMGs.jpeg", width=8, height=7, units="in")
 
 ##### without unmethylated 
 histun <- meth_table5x_filtered %>%
@@ -298,7 +297,7 @@ histun <- meth_table5x_filtered %>%
         strip.text.y = element_text(size = 12, color = "black", face = "bold")) +
   theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
 
-ggsave(filename="data/figures/Percent_methylation_filtered.jpeg", width=6, height=3, units="in")
+ggsave(filename="data/figures/Loci_Percent_methylation_filtered.jpeg", width=6, height=3, units="in")
 ```
 
 ### Filtering out loci with zero's 
@@ -323,7 +322,7 @@ meth_table5x_filtered %>% filter(position == "3396")
 meth_table5x_filtered2_sigDMG <- meth_table5x_filtered2[meth_table5x_filtered2$gene %in% DMG_5x_sig$gene,]
 length(unique(meth_table5x_filtered2_sigDMG$gene)) ##1,447 genes left 
 
-meth_table5x_filtered2 %>% write.csv("data/WGBS/meth_table5x_filtered2.csv", quote = FALSE, row.names = FALSE)
-meth_table5x_filtered2_sigDMG %>% write.csv("data/WGBS/meth_table5x_filtered2_sigDMG.csv", quote = FALSE, row.names = FALSE)
+save(meth_table5x_filtered2, file = "data/WGBS/meth_table5x_filtered2.RData")
+save(meth_table5x_filtered2_sigDMG, file = "data/WGBS/meth_table5x_filtered2_sigDMG.RData")
 ```
 

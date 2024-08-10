@@ -52,8 +52,8 @@ library(Rmisc)
 
 ```{r}
 ## read in if skipping code above 
-meth_table5x_filtered2 <- read.csv("data/WGBS/meth_table5x_filtered2.csv")  
-meth_table5x_filtered2_sigDMG <- read.csv("data/WGBS/meth_table5x_filtered2_sigDMG.csv") 
+load("data/WGBS/meth_table5x_filtered2.RData")  
+load("data/WGBS/meth_table5x_filtered2_sigDMG.RData") 
 ```
 
 
