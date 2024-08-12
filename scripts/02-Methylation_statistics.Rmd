@@ -292,7 +292,7 @@ names(pca_data_sig)[4] <- "PCA2"
 names(pca_data_sig)[5] <- "PCA3"
 names(pca_data_sig)[6] <- "PCA4"
 percentage_sig <- round((scaled_pca_sig$sdev^2) / sum((scaled_pca_sig$sdev^2)) * 100, 2)
-percentage_sig <- paste(colnames(pca_data_sig[3:55]), "(",paste(as.character(pca_data_sig), "%", ")", sep="") )
+#percentage_sig <- paste(colnames(pca_data_sig[3:55]), "(",paste(as.character(pca_data_sig), "%", ")", sep="") )
 
 ## adding treatment column to visualize 
 pca_data_sig$Sample.ID <- as.character(pca_data_sig$Sample.ID)
@@ -304,7 +304,7 @@ names(pca_data_all)[4] <- "PCA2"
 names(pca_data_all)[5] <- "PCA3"
 names(pca_data_all)[6] <- "PCA4"
 percentage_all <- round((scaled_pca_all$sdev^2) / sum((scaled_pca_all$sdev^2)) * 100, 2)
-percentage_all <- paste(colnames(pca_data_all[3:55]), "(",paste(as.character(pca_data_all), "%", ")", sep="") )
+#percentage_all <- paste(colnames(pca_data_all[3:55]), "(",paste(as.character(pca_data_all), "%", ")", sep="") )
 
 ## adding treatment column to visualize 
 pca_data_all$Sample.ID <- as.character(pca_data_all$Sample.ID)
@@ -319,8 +319,8 @@ ploidy_pca <- ggplot(pca_data_all, aes(PCA1, PCA2, color=meth_exp_group)) + #, l
   scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
   theme_bw()+
   scale_shape_manual(values=c(21, 17)) +
-  ylab(percentage_all[2])+
-  xlab(percentage_all[1])+
+  ylab(paste("PCA2:", percentage_all[2], "%")) +
+  xlab(paste("PCA1:", percentage_all[1], "%"))+
   labs(color = "Group", shape = "Ploidy") +
   theme(legend.text = element_text(size=12), 
         legend.position="right",
