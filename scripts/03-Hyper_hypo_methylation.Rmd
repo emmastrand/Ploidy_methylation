@@ -22,7 +22,6 @@ library(ggplot2)
 library(tidyverse)
 ```
 
-
 ## Load data 
 
 ```{r}
@@ -46,7 +45,8 @@ sample_order <- All_data %>% select(-gene) %>%
   gather(., "Sample.ID", "value", 1:51) %>% select(-value) %>% distinct()
 sample_order$`heatmap_df$colInd` <- c(1:51)
 
-colInd_df <- left_join(colInd_df, sample_order, by="heatmap_df$colInd") %>% left_join(., groups, by = "Sample.ID")
+colInd_df <- left_join(colInd_df, sample_order, by="heatmap_df$colInd") %>% 
+  left_join(., groups, by = "Sample.ID")
 
 ## Row orders of genes in heatmap 
 # saving gene row ids to match to name and z score above 
@@ -57,10 +57,11 @@ rowInd_df$gene <- paste0("V", rowInd_df$gene)
 ## testing z score output to double check order of the gene names above 
 ## number below is the first row under rowInd above
 test <- All_data[269,] 
-test <- test %>% gather("Sample.ID", "value", 2:4) %>% na.omit() ##2:4 for meth_exp_group
+test <- test %>% gather("Sample.ID", "value", 2:52) %>% na.omit() ##2:4 for meth_exp_group
 test <- test %>% mutate(mean = mean(value),
                         stdev = sd(value),
                         zscore = (value-mean)/stdev)
+
 ## confirmed that V1 is the first row of rowInd_df which is row 642 in All_data  
 ## next steps is to bind rowInd_df with the row id and then the gene name from All_data
 All_data_gene_names <- All_data 
