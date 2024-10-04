@@ -1,22 +1,10 @@
----
-title: "Differentially Methylated Genes Statistics"
-author: "EL Strand"
-output:
-  github_document: default
-  pdf_document:
-    keep_tex: yes
-  html_document:
-    toc: yes
-    toc_depth: 6
-    toc_float: yes
-editor_options: 
-  chunk_output_type: inline
----
+Differentially Methylated Genes Statistics
+================
+EL Strand
 
-### Load libraries 
+### Load libraries
 
-```{r, message=FALSE, warning=FALSE}
-
+``` r
 # BiocManager::install("goseq")
 
 library(plyr)
@@ -47,9 +35,9 @@ library(cowplot)
 library("ComplexHeatmap")
 ```
 
-## Load data 
+## Load data
 
-```{r}
+``` r
 ## filtered df has all loci 
 load("data/WGBS/meth_table5x_filtered.RData")
 load("data/WGBS/meth_table5x_filtered_sigDMG.RData")
@@ -64,13 +52,11 @@ load("data/metadata/meta.RData")
 meth_group_list <- meth_table5x_filtered2 %>% dplyr::select(Sample.ID, meth_exp_group) %>% distinct()
 ```
 
-
 ## Calculating median loci methylation % per gene per sample
 
-Done with loci > 10% median methylation
-Figure made with DMGs 
+Done with loci \> 10% median methylation Figure made with DMGs
 
-```{r}
+``` r
 ## Median from the filtered2 above
 gene.stats <- meth_table5x_filtered2 %>%
   dplyr::group_by(Sample.ID, gene) %>%
@@ -118,26 +104,45 @@ fig2C <- gene.stats.DMGs %>%
           axis.title.y = element_text(margin = margin(t=0,r=10,b=0,l=0), size=12, face="bold"))
 ```
 
-Statistics on the above 
+Statistics on the above
 
-1225 
-2197
+1225 2197
 
-```{r}
+``` r
 gene.stats.df <- gene.stats.DMGs %>% 
   dplyr::select(Sample.ID, meth_exp_group, median.sample, mean.sample) %>% distinct()
   
 aov <- aov(mean.sample ~ meth_exp_group, data=gene.stats.df)
 summary(aov)
+```
+
+    ##                Df Sum Sq Mean Sq F value Pr(>F)    
+    ## meth_exp_group  2  429.4  214.70     122 <2e-16 ***
+    ## Residuals      48   84.5    1.76                   
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+``` r
 TukeyHSD(aov)
 ```
 
+    ##   Tukey multiple comparisons of means
+    ##     95% family-wise confidence level
+    ## 
+    ## Fit: aov(formula = mean.sample ~ meth_exp_group, data = gene.stats.df)
+    ## 
+    ## $meth_exp_group
+    ##            diff       lwr        upr     p adj
+    ## T1-D  -5.253955 -6.350006 -4.1579048 0.0000000
+    ## T2-D  -7.192544 -8.345817 -6.0392699 0.0000000
+    ## T2-T1 -1.938588 -3.014889 -0.8622881 0.0002019
 
-## Plotting heatmap of DMGs with inidividual variability 
+## Plotting heatmap of DMGs with inidividual variability
 
-`ploidy.meth.means.sigDMG` = significant DMGs. Mean CpG loci % methylation per gene per sample. 
+`ploidy.meth.means.sigDMG` = significant DMGs. Mean CpG loci %
+methylation per gene per sample.
 
-```{r}
+``` r
 ## use for per sample heatmap 
 heatmap.sample.df <- gene.stats %>% filter(!Sample.ID == "1225") %>% filter(!Sample.ID == "2197") %>%
     dplyr::select(Sample.ID, meth_exp_group, gene, mean.gene) %>% distinct() 
@@ -155,8 +160,26 @@ heatmap.group.DMG.df <- heatmap.sample.DMG.df %>% group_by(gene, meth_exp_group)
 heatmap.sample.DMG.df %>% subset(meth_exp_group == "D") %>% dplyr::select(Sample.ID) %>% distinct()
 ```
 
+    ## # A tibble: 15 × 1
+    ##    Sample.ID
+    ##    <chr>    
+    ##  1 1047     
+    ##  2 1159     
+    ##  3 1168     
+    ##  4 1281     
+    ##  5 1296     
+    ##  6 1303     
+    ##  7 1329     
+    ##  8 1416     
+    ##  9 1487     
+    ## 10 1571     
+    ## 11 1755     
+    ## 12 2212     
+    ## 13 2668     
+    ## 14 2861     
+    ## 15 2879
 
-```{r}
+``` r
 All_data <- heatmap.sample.DMG.df %>% dplyr::select(-meth_exp_group) %>%
   #pivot_wider(names_from = c(meth_exp_group), values_from = mean.group)
   pivot_wider(names_from = c(Sample.ID), values_from = mean.gene)
@@ -164,6 +187,11 @@ All_mat <- as.matrix(All_data[,-1]) #create matrix and remove gene name
 group_order<-c("D", "T1", "T2")
 
 par("mar")
+```
+
+    ## [1] 5.1 4.1 4.1 2.1
+
+``` r
 par(mar=c(1,1,1,1))
 
 col_labels_df <- heatmap.sample.DMG.df %>% dplyr::select(Sample.ID, meth_exp_group) %>% distinct() %>%
@@ -205,7 +233,12 @@ heatmap_df<-
   lhei=c(0.5,0.1,2),
   lwid = c(1.5,4))
 dev.off()
+```
 
+    ## png 
+    ##   2
+
+``` r
 ## extracting data from heatmapdf
 zscore_df <- as.data.frame(heatmap_df$carpet) ##carpet score is the zscore that goes into the heatmap
 save(zscore_df, file = "data/WGBS/zscore.RData")
@@ -213,13 +246,13 @@ save(heatmap_df, file = "data/WGBS/Heatmap_output.RData")
 save(All_data, file = "data/WGBS/Heatmap_input.RData")
 ```
 
-## Principal Components Analysis & PERMANOVA 
+## Principal Components Analysis & PERMANOVA
 
-### ALL 
+### ALL
 
 ## Creating matrix table
 
-```{r}
+``` r
 ## Create summary means for loci > 10% median methylation and sigDMG genes 
 pca.means.df <- aggregate(per.meth ~ gene*Sample.ID, data=meth_table5x_filtered2, FUN=mean)
 pca.means.dfsig <- aggregate(per.meth ~ gene*Sample.ID, data=meth_table5x_filtered2_sigDMG, FUN=mean)
@@ -234,18 +267,34 @@ All_data2sig <- pca.means.dfsig %>%
   na.omit()
 
 rownames(All_data2) <- paste0(All_data2$Sample.ID)
+```
+
+    ## Warning: Setting row names on a tibble is deprecated.
+
+``` r
 rownames(All_data2sig) <- paste0(All_data2sig$Sample.ID)
 ```
 
-## Running prcomp function 
+    ## Warning: Setting row names on a tibble is deprecated.
 
-```{r}
+## Running prcomp function
+
+``` r
 scaled_pca_all <-prcomp(All_data2[c(2:ncol(All_data2))], scale=FALSE, center=TRUE)
 scaled_pca_sig <-prcomp(All_data2sig[c(2:ncol(All_data2sig))], scale=FALSE, center=TRUE)
 
 fviz_eig(scaled_pca_all)
-fviz_eig(scaled_pca_sig)
+```
 
+![](02-Methylation_statistics_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+
+``` r
+fviz_eig(scaled_pca_sig)
+```
+
+![](02-Methylation_statistics_files/figure-gfm/unnamed-chunk-8-2.png)<!-- -->
+
+``` r
 coral_info <- All_data2[c(1)]
 coral_infosig <- All_data2sig[c(1)]
 
@@ -264,7 +313,7 @@ pca_data_sig <- scaled_pca_sig%>%
 
 ## Examine PERMANOVA results.
 
-```{r}
+``` r
 # scale data
 vegan_all <- scale(All_data2[c(2:ncol(All_data2))])
 vegan_sig <- scale(All_data2sig[c(2:ncol(All_data2sig))])
@@ -285,7 +334,7 @@ capture.output(permanova_sig, file = "data/statistics/PERMANOVA_filtered2_sigDMG
 
 ## Assemble plot with background points
 
-```{r}
+``` r
 #adding percentages on axis
 names(pca_data_sig)[3] <- "PCA1"
 names(pca_data_sig)[4] <- "PCA2"
@@ -311,9 +360,9 @@ pca_data_all$Sample.ID <- as.character(pca_data_all$Sample.ID)
 pca_data_all <- pca_data_all %>% left_join(., meth_group_list, by = "Sample.ID")
 ```
 
-Plotting by ploidy 
+Plotting by ploidy
 
-```{r}
+``` r
 ploidy_pca <- ggplot(pca_data_all, aes(PCA1, PCA2, color=meth_exp_group)) + #, label=Sample.ID
   geom_point(size = 4, aes(shape = ploidy)) +
   scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
@@ -332,9 +381,9 @@ ploidy_pca <- ggplot(pca_data_all, aes(PCA1, PCA2, color=meth_exp_group)) + #, l
         axis.title.y = element_text(margin = margin(t=0,r=5,b=0,l=0), size=12, face="bold"))
 ```
 
-Plot by environmental 
+Plot by environmental
 
-```{r}
+``` r
 treatment_pca <- ggplot(pca_data_all, aes(PCA1, PCA2, color=Treatment)) + 
   geom_point(size = 4, aes(shape = Timepoint)) +
   scale_colour_manual(values = c("blue", "lightblue", "salmon", "red3")) +
@@ -354,7 +403,7 @@ treatment_pca <- ggplot(pca_data_all, aes(PCA1, PCA2, color=Treatment)) +
 
 Plotting altogether for Figure 2
 
-```{r}
+``` r
 fig2_plots <- plot_grid(treatment_pca, ploidy_pca, fig2C,
           labels=c("A)", "B)", "C)"), 
           nrow=3, ncol=1,

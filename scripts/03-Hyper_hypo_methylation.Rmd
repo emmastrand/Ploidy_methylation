@@ -13,25 +13,42 @@ editor_options:
   chunk_output_type: inline
 ---
 
-# Differentially Methylated Genes Statistics 
+# Hyper and hypo-methylated genes based on z-score of heatmap 
 
-load zscore Rdata
+## Load libraries 
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+```
+
+
+## Load data 
+
+```{r}
+load("data/WGBS/zscore.RData") ## zscore_df
+load("data/WGBS/Heatmap_output.RData") ## heatmap_df
+load("data/WGBS/Heatmap_input.RData") ## All_data
+
+groups <- read.csv("data/metadata/meth_pattern_groups.csv") %>% dplyr::select(-X)
+groups$Sample.ID <- as.character(groups$Sample.ID)
+```
 
 ## Calculating z-score and hypermethylayed / hypomethylated groups 
 
+Ordering samples in df
+
 ```{r}
-
-
-##sample order of heatmap 
+## Column orders of sample IDs in heatmap  
 colInd_df <- as.data.frame(heatmap_df$colInd)
+
 sample_order <- All_data %>% select(-gene) %>%
   gather(., "Sample.ID", "value", 1:51) %>% select(-value) %>% distinct()
 sample_order$`heatmap_df$colInd` <- c(1:51)
-colInd_df <- left_join(colInd_df, sample_order, by="heatmap_df$colInd") 
-sample_ploidyinfo <- gene.stats %>% select(Sample.ID, meth_exp_group) %>% distinct()
-sample_ploidyinfo$Sample.ID <- as.character(sample_ploidyinfo$Sample.ID)
-colInd_df <- left_join(colInd_df, sample_ploidyinfo, by = "Sample.ID")
 
+colInd_df <- left_join(colInd_df, sample_order, by="heatmap_df$colInd") %>% left_join(., groups, by = "Sample.ID")
+
+## Row orders of genes in heatmap 
 # saving gene row ids to match to name and z score above 
 rowInd_df <- as.data.frame(heatmap_df$rowInd)
 rowInd_df$gene <- c(1:1447)
@@ -39,7 +56,7 @@ rowInd_df$gene <- paste0("V", rowInd_df$gene)
 
 ## testing z score output to double check order of the gene names above 
 ## number below is the first row under rowInd above
-test <- All_data[1145,] 
+test <- All_data[269,] 
 test <- test %>% gather("Sample.ID", "value", 2:4) %>% na.omit() ##2:4 for meth_exp_group
 test <- test %>% mutate(mean = mean(value),
                         stdev = sd(value),
@@ -49,6 +66,18 @@ test <- test %>% mutate(mean = mean(value),
 All_data_gene_names <- All_data 
 All_data_gene_names$rowInd <- c(1:1447)
 #All_data_gene_names$rowInd <- as.character(All_data_gene_names$rowInd)
+```
+
+
+```{r}
+
+
+
+
+
+
+
+
 
 zscore_modified <- zscore_df %>% 
   rownames_to_column(., var = "meth_exp_group") %>% na.omit() %>%
