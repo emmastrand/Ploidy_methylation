@@ -100,13 +100,13 @@ hypometh_trip1 <- zscore_median %>% filter(T1 < -0.75)
 # Genes that are hypomethylated in Diploidy (and not in Triploidy 2 or Triploidy 1)  = 143 genes
 hypometh_dip <- zscore_median %>% filter(D < -0.75) 
 
-hypermeth_trip2 %>% write.csv("data/WGBS/DMG_hypermeth_triploidy2.csv")
-hypermeth_trip1 %>% write.csv("data/WGBS/DMG_hypermeth_triploidy1.csv")
-hypermeth_dip %>% write.csv("data/WGBS/DMG_hypermeth_diploidy.csv")
+hypermeth_trip2 %>% write.csv("data/WGBS/DMG_hypermeth_triploidy2.csv", row.names = FALSE)
+hypermeth_trip1 %>% write.csv("data/WGBS/DMG_hypermeth_triploidy1.csv", row.names = FALSE)
+hypermeth_dip %>% write.csv("data/WGBS/DMG_hypermeth_diploidy.csv", row.names = FALSE)
 
-hypometh_trip2 %>% write.csv("data/WGBS/DMG_hypometh_triploidy2.csv")
-hypometh_trip1 %>% write.csv("data/WGBS/DMG_hypometh_triploidy1.csv")
-hypometh_dip %>% write.csv("data/WGBS/DMG_hypometh_diploidy.csv")
+hypometh_trip2 %>% write.csv("data/WGBS/DMG_hypometh_triploidy2.csv", row.names = FALSE)
+hypometh_trip1 %>% write.csv("data/WGBS/DMG_hypometh_triploidy1.csv", row.names = FALSE)
+hypometh_dip %>% write.csv("data/WGBS/DMG_hypometh_diploidy.csv", row.names = FALSE)
 ```
 
 Plotting the hyper-meth/hypo-meth levels above 

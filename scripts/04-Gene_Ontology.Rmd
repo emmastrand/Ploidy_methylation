@@ -18,13 +18,61 @@ editor_options:
 ## Load libraries 
 
 ```{r}
+## GO SEQ 
+#BiocManager::install("GO.db")
+library(GO.db)
+#BiocManager::install("goseq")
+library(goseq)
+library(ontologyIndex)
 
+## GENERAL
+library(ggplot2)
+library(tidyverse)
 ```
 
-## Load data 
+## Load gene annotation information data 
 
 ```{r}
-eggNOGG <- read.delim2("data/Pocillopora_acuta_KBHIv2.genes.EggNog_results.txt") %>% rename(Gene = X.query)
+eggNOGG <- read.delim2("data/Pocillopora_acuta_KBHIv2.genes.EggNog_results.txt") %>% dplyr::rename(Gene = X.query)
+length(unique(eggNOGG$Gene)) #16,784
+
+gff <- read.delim2("data/Pocillopora_acuta_HIv2.genes.gff3", header=F,
+                   col.names = c("Scaffold", "Program", "Region", "Start", "Stop", "V6", "V7", "V8", "Gene")) %>%
+  dplyr::select(Gene, Start, Stop) %>% 
+  filter(grepl("ID=", Gene)) %>%
+  mutate(Length=Stop-Start,
+         Gene = gsub("ID=", "", Gene)) %>%
+  dplyr::select(Gene, Length)
+length(unique(gff$Gene)) #33,730
+
+gene_meta <- left_join(eggNOGG, gff, by = "Gene") #16,784
+
+go_slim <- get_ontology("http://current.geneontology.org/ontology/subsets/goslim_generic.obo")
 ```
+
+## Load data (Input)
+
+The core of GO enrichment analysis involves comparing the input gene set against the background of all genes in the genome. The analysis aims to identify GO terms that are overrepresented in the input set compared to what would be expected by chance. 
+
+```{r}
+## Input set 
+hypolist_D <- read.csv("data/WGBS/DMG_hypometh_diploidy.csv")
+hypolist_T1 <- read.csv("data/WGBS/DMG_hypometh_triploidy1.csv")
+hypolist_T2 <- read.csv("data/WGBS/DMG_hypometh_triploidy2.csv")
+hyperlist_D <- read.csv("data/WGBS/DMG_hypermeth_diploidy.csv")
+hyperlist_T1 <- read.csv("data/WGBS/DMG_hypermeth_triploidy1.csv")
+hyperlist_T2 <- read.csv("data/WGBS/DMG_hypermeth_triploidy2.csv")
+```
+
+## Load background data 
+
+```{r}
+load("data/WGBS/meth_table5x_filtered2.RData") #1,799 genes 
+background_gene_list <- as.data.frame(unique(meth_table5x_filtered2$gene)) %>% dplyr::rename(Gene = 1) %>%
+  left_join(., gene_meta, by = "Gene")
+```
+
+
+
 
 
