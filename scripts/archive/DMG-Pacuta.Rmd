@@ -1,0 +1,834 @@
+---
+title: "Differentially methylated genes - Pacuta"
+author: "EL Strand"
+output:
+  github_document: default
+  pdf_document:
+    keep_tex: yes
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Differentially Methylated Genes 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Input from this script: https://github.com/emmastrand/EmmaStrand_Notebook/blob/master/_posts/2021-10-21-KBay-Bleaching-Pairs-WGBS-Analysis-Pipeline.md#kbay-wgbs-methylation-analysis-pipeline
+
+I'm following Hollie Putnam and Kevin Wong's pipelines. 
+- https://github.com/kevinhwong1/Thermal_Transplant_Molecular/blob/main/scripts/WGBS_GM.Rmd
+
+## Load libraries 
+
+https://github.com/hputnam/Geoduck_Meth/blob/master/RAnalysis/Scripts/GM.Rmd
+
+```{r, message=FALSE, warning=FALSE}
+
+# BiocManager::install("goseq")
+
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(readxl)
+library(plotrix) 
+library(gridExtra)
+library(seacarb) 
+library(pheatmap)
+library(tidyr)
+library(goseq)
+library(genefilter)
+library(gplots)
+library(cowplot)
+library(lsmeans)
+library(data.table)
+library(RColorBrewer)
+library(randomcoloR)
+#library(GSEABase)
+library(ggpubr)
+library(hrbrthemes)
+library(viridis)
+library(factoextra)
+#library(ropls)
+#library(mixOmics)
+library(vegan)
+library(Rmisc)
+```
+
+## Load all data files 
+
+### P. acuta annotation from Rutgers 
+
+http://cyanophora.rutgers.edu/Pocillopora_acuta/
+
+GO Slim filed created from GOSlim.Rmd script in same repo. 
+
+```{r}
+eggNOGG <- read.delim(file = "data/Pocillopora_acuta_HIv2.genes.EggNog_results.txt",
+                      sep = "\t", header=TRUE) %>% dplyr::rename(gene = X.query)
+```
+
+### CpG OE calculated from prior scripts 
+
+Generated in this script: https://github.com/emmastrand/EmmaStrand_Notebook/blob/master/_posts/2022-11-19-CpG-OE-Analysis-for-DNA-Methylation.md
+
+```{r}
+OE <- read.csv(file = "data/WGBS/Pacuta_CpGOE_full.csv", sep = ",",
+                 header = TRUE) %>% dplyr::rename(gene = Gene)
+
+# there is a space after each gene name.. get rid of. This was some error in CpG_OE.Rmd script 
+OE$gene <- gsub(" ","",OE$gene)
+
+#merge with annotation information
+gene_meta <- dplyr::full_join(eggNOGG, OE, by = "gene")  
+OE_NA <- gene_meta %>% subset(.,is.na(status)) ##26 genes found with no CpG O/E calculated (this gene was not in genome but in gff)
+```
+
+### DNA methylation files 
+
+```{r}
+# meth5x <- list.files(path = "data/WGBS/output/meth_counts_5x", 
+#                      pattern = ".bed$", full.names=TRUE) %>% set_names(.) %>%
+#   map_dfr(read.csv,.id="Sample.ID", header=FALSE, sep="\t", na.string="NA", stringsAsFactors = FALSE) %>%
+#   dplyr::select(-c(V3,V7:V14)) 
+# 
+# colnames(meth5x) <- c("Sample.ID", "scaffold", "position","per.meth","meth","unmeth","gene")
+# meth5x$gene <- gsub("ID=","",meth5x$gene) #remove extra characters
+# meth5x$gene <- gsub("Parent=","",meth5x$gene) #remove extra characters
+# meth5x$Sample.ID <- gsub("data/WGBS/output/meth_counts_5x/","",meth5x$Sample.ID) #remove extra characters
+# meth5x$Sample.ID <- gsub("_5x_sorted.tab_gene_CpG_5x_enrichment.bed","",meth5x$Sample.ID) #remove extra characters 
+# meth5x$Sample.ID <- as.character(meth5x$Sample.ID)
+# 
+# meth10x <- list.files(path = "data/WGBS/output/meth_counts_10x", 
+#                      pattern = ".bed$", full.names=TRUE) %>% set_names(.) %>%
+#   map_dfr(read.csv,.id="Sample.ID", header=FALSE, sep="\t", na.string="NA", stringsAsFactors = FALSE) %>%
+#   dplyr::select(-c(V3,V7:V14)) 
+# 
+# colnames(meth10x) <- c("Sample.ID", "scaffold", "position","per.meth","meth","unmeth","gene")
+# meth10x$gene <- gsub("ID=","",meth10x$gene) #remove extra characters
+# meth10x$gene <- gsub("Parent=","",meth10x$gene) #remove extra characters
+# meth10x$Sample.ID <- gsub("data/WGBS/output/meth_counts_10x/","",meth10x$Sample.ID) #remove extra characters
+# meth10x$Sample.ID <- gsub("_10x_sorted.tab_gene_CpG_10x_enrichment.bed","",meth10x$Sample.ID) #remove extra characters 
+# meth10x$Sample.ID <- as.character(meth10x$Sample.ID)
+```
+
+##### all.bed files 
+
+Do triploids have consistently methylated positions that aren't in diploids?
+
+```{r}
+# meth5x_all <- list.files(path = "data/WGBS/output/meth_counts_5x",
+#                      pattern = "all.bed$", full.names=TRUE) %>% set_names(.) %>%
+#   map_dfr(read.csv,.id="Sample.ID", header=FALSE, sep="\t", na.string="NA", stringsAsFactors = FALSE) %>%
+#   dplyr::select(-c(V3,V7:V14))
+# 
+# colnames(meth5x_all) <- c("Sample.ID", "scaffold", "position","per.meth","meth","unmeth","gene")
+# meth5x_all$gene <- gsub("ID=","",meth5x_all$gene) #remove extra characters
+# meth5x_all$gene <- gsub("Parent=","",meth5x_all$gene) #remove extra characters
+# meth5x_all$Sample.ID <- gsub("data/WGBS/output/meth_counts_5x/","",meth5x_all$Sample.ID) #remove extra characters
+# meth5x_all$Sample.ID <- gsub("_5x_sorted.tab_gene_CpG_5x_all.bed","",meth5x_all$Sample.ID) #remove extra characters
+# meth5x_all$Sample.ID <- as.character(meth5x_all$Sample.ID)
+# 
+# df5xall <- full_join(meth5x_all, meta, by = "Sample.ID") %>%
+#   subset(!group == "Group7" & !group == "Ungroup") %>%
+#   mutate(meth_exp_group = case_when(
+#     group == "Group1" ~ "T1",
+#     group == "Group2" ~ "T1",
+#     group == "Group3" ~ "T2",
+#     group == "Group4" ~ "T2",
+#     group == "Group5" ~ "D",
+#     group == "Group6" ~ "D")) %>% 
+#   filter(!Sample.ID == "1225") %>% 
+#   filter(!Sample.ID == "2197")
+# 
+# meth_table_all5x <- df5xall
+# meth_table_all5x$sample_gene <- paste0(meth_table_all5x$Sample.ID, meth_table_all5x$gene)
+# 
+# meth_table5x_position_countsall <- dplyr::count(meth_table_all5x, vars = c(sample_gene))
+# meth_table5x_position_countsall <- meth_table5x_position_countsall[which(meth_table5x_position_countsall$n > 5), ]
+# 
+# meth_table5x_filteredall <- meth_table_all5x[meth_table_all5x$sample_gene %in% meth_table5x_position_countsall$vars,]
+# 
+# meth_table5x_filteredall2 <- meth_table5x_filteredall %>% 
+#   group_by(position) %>%
+#   mutate(position.median = median(per.meth)) %>%
+#   filter(!position.median < 10) %>% ungroup()
+# 
+# ## average number of unique positions per sample: dip vs trip
+
+```
+
+
+
+```{r}
+# save(meth5x, file = "data/WGBS/output/meth5x.RData")
+# save(meth10x, file = "data/WGBS/output/meth10x.RData")
+load(file="data/WGBS/output/meth5x.RData")
+```
+
+
+### Metadata files 
+
+```{r}
+meta <- read.csv("data/Molecular_metadata.csv") %>%
+  mutate(Timepoint = if_else(Plug_ID == "2153", "12 hour", Timepoint)) %>%
+  dplyr::rename(Sample.ID = Plug_ID) %>% 
+  dplyr::select(Sample.ID, Species, Tank, Treatment, Temperature, CO2, Timepoint, Sample.Date) 
+  
+meta$Sample.ID <- as.character(meta$Sample.ID)
+
+meta$Timepoint <- factor(meta$Timepoint, 
+                           levels = c("0 hour", "6 hour", "12 hour", "30 hour",
+                                      "1 week", "2 week", "4 week", "6 week",
+                                      "8 week", "12 week", "16 week"))
+
+pacuta_clade <- read.delim2("data/clade_annotations_Pacuta.txt", header = TRUE, sep="\t") %>%
+  separate(., Sample, c("Species", "Treatment", "Timepoint", "Sample.ID")) %>% 
+  dplyr::select(-Treatment, -Timepoint) %>% dplyr::select(Sample.ID, Clade)
+
+ploidyinfo <- read.delim2("data/samples_Pacuta.annotations.txt", 
+                          header=TRUE, sep="\t", na.strings=c("","NA")) %>% 
+  dplyr::rename(., Sample.ID = plugid) %>% 
+  mutate_if(is.integer, as.character) %>% 
+  dplyr::select(Sample.ID, ploidy, group, treesplit) %>%
+  #mutate(treesplit = coalesce(treesplit, "D")) %>% 
+  #changing NA values to "D" in treesplit -- this is just so triploidy is split in 2 groups and diploidy is altogether 
+  left_join(., pacuta_clade, by="Sample.ID")
+
+meta <- dplyr::left_join(meta, ploidyinfo, by="Sample.ID")
+```
+
+### Merge dataframes together
+
+```{r}
+df5x <- full_join(meth5x, meta, by = "Sample.ID") %>%
+  mutate(meth_exp_group = case_when(
+    group == "Group1" ~ "T1",
+    group == "Group2" ~ "T1",
+    group == "Group3" ~ "T2",
+    group == "Group4" ~ "T2",
+    group == "Group5" ~ "D",
+    group == "Group6" ~ "D",
+    group == "Group7" ~ "ungroup",
+    group == "Ungroup" ~ "ungroup")) %>% 
+  subset(!group == "Group7" & !group == "Ungroup") %>%
+  filter(!Sample.ID == "1225") %>% 
+  filter(!Sample.ID == "2197") 
+
+df5x %>% 
+  dplyr::select(Sample.ID, meth_exp_group, per.meth) %>% 
+  filter(!is.na(per.meth)) %>% dplyr::select(-per.meth) %>%
+  filter(!Sample.ID == "1225") %>% 
+  filter(!Sample.ID == "2197") %>%
+  distinct() %>% write.csv("data/WGBS/output/meth_pattern_groups.csv")
+```
+
+## Binomial GLM to test for differentially methylated genes
+
+### Filter for genes with >5 methylated positions
+
+Come back to this value of a cut off of 5 methylated positions per gene.. Does this need to be higher? Test cut offs.
+
+```{r}
+meth_table5x <- df5x
+meth_table5x$sample_gene <- paste0(meth_table5x$Sample.ID, meth_table5x$gene)
+```
+
+```{r}
+meth_table5x_position_counts <- dplyr::count(meth_table5x, vars = c(sample_gene))
+meth_table5x_position_counts <- meth_table5x_position_counts[which(meth_table5x_position_counts$n > 5), ]
+
+meth_table5x_filtered <- meth_table5x[meth_table5x$sample_gene %in% meth_table5x_position_counts$vars,]
+meth_table5x_filtered %>% write.csv("data/WGBS/output/allgenes5x_filtered.csv")
+```
+
+```{r}
+meth_table5x_filtered <- read.csv("data/WGBS/output/allgenes5x_filtered.csv") %>% 
+  dplyr::select(-X) %>% distinct()
+```
+
+### Run loop for GLM 
+
+Create data frame to store results
+
+```{r}
+results5x <- data.frame()
+results10x <- data.frame()
+```
+
+First subset the unique dataframes and second run the GLMs
+
+```{r}
+gs5x <- unique(meth_table5x_filtered$gene)
+```
+
+#### 5x loop
+
+```{r}
+for(i in 1:length(meth_table5x_filtered$gene)){
+    
+    #subset the dataframe gene by gene
+    meth_table_filt1 <- subset(meth_table5x_filtered, gene ==gs5x[1])
+    
+    # fit glm position model
+    fit2 <- glm(matrix(c(meth, unmeth), ncol=2) ~ meth_exp_group, 
+               data=meth_table_filt1, family=binomial)
+    a2 <- anova(fit2, test="LRT")
+
+    # capture summary stats to data frame
+    df2 <- data.frame(gene = meth_table_filt1[1,7], ###for treesplit [1,8] or at least double check this
+                     pval.methgroup = a2$`Pr(>Chi)`[2],
+                     stringsAsFactors = F)
+    # bind rows of temporary data frame to the results data frame
+    results5x <- rbind(results5x, df2)
+}
+```
+
+Export df created. Run the read.csv() function below the export code to read back in those df. When running the script multiple times, you don't need to run the binomial function above. Skip that code and just read in results5x or 10x df. 
+
+```{r}
+results5x %>% write.csv("data/WGBS/output/results5x_methgroup.csv") #9,647 genes - this should match length of gs5x
+#results5x %>% write.csv("data/WGBS/output/results5x_ploidy.csv") #9,647 genes - this should match length of gs5x
+#results5x %>% write.csv("data/WGBS/output/results5x_treesplit.csv") #9,647 genes - this should match length of gs5x
+
+results5x <- read.csv("data/WGBS/output/results5x_methgroup.csv", header = TRUE) %>% 
+  dplyr::select(-X) %>% distinct() ## distinct() necessary in case the model above went through multiple times
+```
+
+Some genes return the error: `"glm.fit: fitted probabilities numerically 0 or 1 occurredglm.fit: fitted probabilities numerically 0 or 1". These will be filtered out of analysis later on` and `Error in `contrasts<-`(`*tmp*`, value = contr.funs[1 + isOF[nn]]) : contrasts can be applied only to factors with 2 or more levels`. 
+
+## Calculating adjusted p-values for glm
+
+```{r}
+results5x[is.na(results5x)] <- 0
+
+#results5x$adj.pval.treesplit <- p.adjust(results5x$pval.treesplit, method='BH')
+#results5x$adj.pval.ploidy <- p.adjust(results5x$pval.ploidy, method='BH')
+results5x$adj.pval.methgroup <- p.adjust(results5x$pval.methgroup, method='BH')
+```
+
+### subsetting new df to only those adjusted p value columns 
+
+Treesplit: 3,852 genes significantly DMG out of 9,467 genes that had at least 5 methylated positions and appeared in all samples.
+
+Ploidy: 1,399 genes significantly DMG out of 9,467 genes that had at least 5 methylated positions and appeared in all samples.
+
+methgroup: X genes significantly DMG out of 9,467 genes that had at least 5 methylated positions and appeared in all samples.
+
+```{r}
+DMG_5x_sig <- results5x %>%
+  dplyr::select(gene, adj.pval.methgroup) %>% #dplyr::select(gene, adj.pval.treesplit) %>% #adj.pval.ploidy
+  mutate(across(2, round, 8)) %>%
+  filter(adj.pval.methgroup < 0.050) #filter(adj.pval.treesplit < 0.050)
+
+# DMG_5x_sig <- results5x %>% 
+#   dplyr::select(gene, adj.pval.Temp, adj.pval.CO2, adj.pval.Time,
+#                 adj.pval.Temp_x_CO2, adj.pval.Temp_x_Time, adj.pval.CO2_x_Time, 
+#                 adj.pval.Temp_x_CO2_x_Time) %>%
+#   mutate(across(2:8, round, 8)) %>% #five decimal places to get rid of scientific notation
+#   filter(adj.pval.Temp < 0.050 | adj.pval.CO2 < 0.050 | adj.pval.Time < 0.050 | 
+#          adj.pval.Temp_x_CO2 < 0.050 | adj.pval.Temp_x_Time < 0.050 | adj.pval.CO2_x_Time < 0.050 | 
+#          adj.pval.Temp_x_CO2_x_Time < 0.050) # filter for the significant ones
+
+#DMG_5x_sig %>% write.csv("data/WGBS/output/DMG_5x_sig_treesplit.csv")
+#DMG_5x_sig %>% write.csv("data/WGBS/output/DMG_5x_sig_ploidy.csv")
+DMG_5x_sig %>% write.csv("data/WGBS/output/DMG_5x_sig_methgroup.csv")
+```
+
+
+
+#### Dataframes at this point 
+
+- `eggNOGG` = original gene annotation file 
+- `OE` = output from CpG OE script with weakly and heavily methylated gene sets 
+- `gene_meta` = merged metadata of genes 
+- `df5x / df10x` = .bed files and metadata together
+- `meth_table5x_filtered / meth_table10x_filtered` = output from filtering all genes with 5+ methylated positions; input for the glm model
+- `gs5x / gs10x` = list of unique genes from filtered methylation table  
+- `results5x / results10x` = output from glm model; contains gene names, pvalues and adjusted pvalues for differentially methylated  
+- `DMG_5x_sig / DMG_5x_sig` = only adjusted pvalues from the results 5 and 10x dfs 
+
+## Significantly DMG - weakly and heavily 
+
+```{r}
+DMG_5x_sig #3,852 for treesplit; 1,399 for ploidy ; 3,870 for methgroup
+DMG_5x_sig <- left_join(DMG_5x_sig, OE, by="gene") 
+filter(DMG_5x_sig, status == "weakly") ##3,374 genes for treesplit; 1,117 for ploidy ; 3,375 for methgroup
+filter(DMG_5x_sig, status == "heavily") ##478 genes for treesplit; 282 for ploidy ; 495 for methgroup 
+```
+
+### Adding "loci status" to each loci as a category and filtering to only significant DMGs 
+
+```{r}
+meth_table5x_filtered <- meth_table5x_filtered %>% 
+  mutate(loci_status = case_when(
+          per.meth <= 10 ~ "unmethylated",
+          per.meth > 10 & per.meth < 50 ~ "sparsely methylated",
+          per.meth >= 50 ~ "methylated"))
+
+## hist for per.meth distribution for DMGs
+meth_table5x_filtered_sigDMG <- meth_table5x_filtered[meth_table5x_filtered$gene %in% DMG_5x_sig$gene,]
+```
+
+## Methylation level calculations  
+
+### GENERAL HISTOGRAM OF CPG LOCI METHYLATION LEVEL
+
+```{r}
+### number of loci per sample = 103,629 unique loci for all; 44,366 for sig DMG
+## sample size of D = 16; T1=20; T2=17 
+single_sample <- meth_table5x_filtered2_sigDMG %>% select(position) %>% distinct()
+count(unique(single_sample$Sample.ID))
+
+#### GENERAL HISTOGRAM OF CPG LOCI METHYLATION LEVEL 
+## hist for per.meth distribution for all genes
+histall <- meth_table5x_filtered %>%
+  ggplot(aes(x=per.meth, fill=meth_exp_group)) + theme_bw() +
+  facet_grid(factor(loci_status, levels=c('unmethylated','sparsely methylated','methylated'))~meth_exp_group, scales="free") +
+  geom_histogram(alpha=0.6, position = 'identity') +
+  scale_fill_manual(values=c("skyblue3", "olivedrab4", "darkgreen")) +
+  labs(fill="") +
+  theme(strip.text.x = element_text(size = 12, color = "black", face = "bold"),
+        strip.text.y = element_text(size = 12, color = "black", face = "bold")) +
+  theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
+
+## hist for per.meth distribution for significant DMGs 
+histDMG <- meth_table5x_filtered_sigDMG %>%
+  ggplot(aes(x=per.meth, fill=meth_exp_group)) + theme_bw() +
+  facet_grid(factor(loci_status, levels=c('unmethylated','sparsely methylated','methylated'))~meth_exp_group, scales="free") +
+  geom_histogram(alpha=0.6, position = 'identity') +
+  scale_fill_manual(values=c("skyblue3", "olivedrab4", "darkgreen")) +
+  labs(fill="") +
+  theme(strip.text.x = element_text(size = 12, color = "black", face = "bold"),
+        strip.text.y = element_text(size = 12, color = "black", face = "bold")) +
+  theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
+
+##### without unmethylated 
+histun <- meth_table5x_filtered %>%
+  filter(!loci_status == "unmethylated") %>%
+  ggplot(aes(x=per.meth, fill=meth_exp_group)) + theme_bw() +
+  facet_grid(~meth_exp_group, scales="free") +
+  geom_histogram(alpha=0.6, position = 'identity') +
+  scale_fill_manual(values=c("skyblue3", "olivedrab4", "darkgreen")) +
+  labs(fill="") +
+  theme(strip.text.x = element_text(size = 12, color = "black", face = "bold"),
+        strip.text.y = element_text(size = 12, color = "black", face = "bold")) +
+  theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
+
+# ggsave(filename="data/WGBS/output/figures/locipercent_histun.jpeg", 
+#        plot=histun, dpi=300, width=5.5, height=2.5, units="in")
+```
+
+### Filtering out loci with zero's 
+
+Filter out loci that have median < 10% across all samples. 
+
+meth_table5x_filtered = 5,346,733 loci 
+meth_table5x_filtered_sigDMG = 2,278,227 loci
+
+meth_table5x_filtered2 = 229,661 loci in 1,976 genes (4,503 loci per sample)
+meth_table5x_filtered2_sigDMG =  198,647 loci in 1,447 genes (3,895 loci per sample)
+
+```{r}
+meth_table5x_filtered2 <- meth_table5x_filtered %>% 
+  group_by(position) %>%
+  mutate(position.median = median(per.meth)) %>%
+  filter(!position.median < 10) %>% ungroup()
+
+meth_table5x_filtered_out <- meth_table5x_filtered %>% 
+  group_by(position) %>%
+  mutate(position.median = median(per.meth)) %>%
+  filter(!position.median > 10) %>% ungroup()
+
+#unique(meth_table5x_filtered2$gene)
+
+## viewing one loci to see if the above function worked 
+meth_table5x_filtered2 %>% filter(position == "3396")
+meth_table5x_filtered %>% filter(position == "3396")
+
+meth_table5x_filtered2_sigDMG <- meth_table5x_filtered2[meth_table5x_filtered2$gene %in% DMG_5x_sig$gene,]
+meth_table5x_filteredout_sigDMG <- meth_table5x_filtered_out[meth_table5x_filtered_out$gene %in% DMG_5x_sig$gene,]
+
+unique(meth_table5x_filtered2_sigDMG$gene)
+
+meth_table5x_filtered2 %>% write.csv("data/WGBS/output/meth_table5x_filtered2.csv")
+meth_table5x_filtered2_sigDMG %>% write.csv("data/WGBS/output/meth_table5x_filtered2_sigDMG.csv")
+
+meth_table5x_filtered2 <- read.csv("data/WGBS/output/meth_table5x_filtered2.csv") %>% dplyr::select(-X) %>% distinct()
+meth_table5x_filtered2_sigDMG <- read.csv("data/WGBS/output/meth_table5x_filtered2_sigDMG.csv") %>% dplyr::select(-X) %>% distinct()
+```
+
+Calculating median loci methylation % per gene per sample for all DMGs 
+
+```{r}
+## Median from the filtered2 above
+gene.stats <- meth_table5x_filtered2 %>%
+  dplyr::group_by(Sample.ID, gene) %>%
+  mutate(median.gene = median(per.meth),
+         mean.gene = mean(per.meth)) %>% ungroup() %>%
+  dplyr::group_by(Sample.ID) %>%
+  mutate(median.sample = median(median.gene),
+         mean.sample = mean(mean.gene)) %>% ungroup()
+
+#gene.stats %>% dplyr::select(gene) %>% distinct()
+
+gene.stats.DMGs <- meth_table5x_filtered2_sigDMG %>%
+  dplyr::group_by(Sample.ID, gene) %>%
+  mutate(median.gene = median(per.meth, na.rm=TRUE),
+         mean.gene = mean(per.meth)) %>% ungroup() %>%
+  dplyr::group_by(Sample.ID) %>%
+  mutate(median.sample = median(median.gene),
+         mean.sample = mean(mean.gene)) %>% ungroup()
+
+## 1,447 genes of the DMGs have median loci % methylation above 10 
+gene.stats.DMGs %>% dplyr::select(gene) %>% distinct() #3,560 genes filtered out
+gene.stats %>% dplyr::select(gene) %>% distinct() #9,292 genes filtered out
+  
+## plot 
+gene.stats.plot <-  gene.stats.DMGs %>% 
+    #select(Sample.ID, meth_exp_group, gene, median.gene, mean.gene) %>% distinct() %>%
+    dplyr::select(Sample.ID, meth_exp_group, median.sample, mean.sample) %>% distinct() %>%
+    ggplot(., aes(x=meth_exp_group, y=mean.sample, color=meth_exp_group)) + 
+    geom_boxplot() +
+    geom_jitter(alpha=0.5, width = 0.25) + 
+    theme_bw() + ylab("Mean CpG loci % methylation per gene") +
+    #facet_wrap(~gene_status, scales = "free_y") + 
+    scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+    theme(strip.text.x = element_text(size = 12, color = "black", face = "bold"),
+          strip.text.y = element_text(size = 12, color = "black", face = "bold")) +
+    theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
+
+# ggsave(filename="data/WGBS/output/figures/permeth_out_mean_persample.jpeg", 
+#        plot=gene.stats.plot, dpi=300, width=5, height=4, units="in")
+```
+
+Statistics on the above 
+
+1225 
+2197
+
+```{r}
+gene.stats.df <- gene.stats.DMGs %>% 
+  dplyr::select(Sample.ID, meth_exp_group, median.sample, mean.sample) %>% distinct()
+  
+aov <- aov(mean.sample ~ meth_exp_group, data=gene.stats.df)
+summary(aov)
+TukeyHSD(aov)
+```
+
+
+# Plotting heatmap of DMGs with inidividual variability 
+
+`ploidy.meth.means.sigDMG` = significant DMGs. Mean CpG loci % methylation per gene per sample. 
+
+```{r}
+## use for per sample heatmap 
+heatmap.sample.df <- gene.stats %>% filter(!Sample.ID == "1225") %>% filter(!Sample.ID == "2197") %>%
+    dplyr::select(Sample.ID, meth_exp_group, gene, mean.gene) %>% distinct() 
+
+heatmap.sample.DMG.df <- gene.stats.DMGs %>% filter(!Sample.ID == "1225") %>% filter(!Sample.ID == "2197") %>%
+    dplyr::select(Sample.ID, gene, meth_exp_group, mean.gene) %>% distinct() 
+
+## use for ploidy group heatmap 
+heatmap.group.df <- heatmap.sample.df %>% group_by(gene, meth_exp_group) %>%
+  mutate(mean.group = mean(mean.gene)) %>% ungroup() %>% dplyr::select(-Sample.ID, -mean.gene) %>% distinct()
+
+heatmap.group.DMG.df <- heatmap.sample.DMG.df %>% group_by(gene, meth_exp_group) %>%
+  mutate(mean.group = mean(mean.gene)) %>% ungroup() %>% dplyr::select(-Sample.ID, -mean.gene) %>% distinct()
+
+heatmap.sample.DMG.df %>% subset(meth_exp_group == "D") %>% dplyr::select(Sample.ID) %>% distinct()
+```
+
+
+```{r}
+library("ComplexHeatmap")
+
+All_data <- heatmap.sample.DMG.df %>% dplyr::select(-meth_exp_group) %>%
+  #pivot_wider(names_from = c(meth_exp_group), values_from = mean.group)
+  pivot_wider(names_from = c(Sample.ID), values_from = mean.gene)
+All_mat <- as.matrix(All_data[,-1]) #create matrix and remove gene name 
+group_order<-c("D", "T1", "T2")
+
+pdf("data/WGBS/output/figures/Heatmap_samples_DMG.pdf")
+#heatmap_df<-heatmap.2(All_mat, 
+heatmap.2(All_mat, 
+          cexCol = 1.5, 
+          distfun = function(x) as.dist(1 - cor(t(x), use = "pa")), 
+          hclustfun = function(x) hclust(x,method = 'average'),
+          key.xtickfun = function() {
+  breaks = pretty(parent.frame()$breaks)
+  breaks = breaks[c(1,length(breaks))]
+  list(at = parent.frame()$scale01(breaks),labels = breaks)},
+  Colv=TRUE, 
+  col= rev(RColorBrewer::brewer.pal(name = "RdYlBu", n = 10)), 
+  density.info = "none", 
+  #ColSideColors=col_labels,
+  #colCol = col_labels,
+  trace = "none", 
+  scale = "row", 
+  labRow = FALSE,
+  labCol = FALSE,
+  sepcolor="none",
+  sepwidth=c(0.1,0.01),
+  lmat = rbind(c(0,3),c(2,1),c(4,0)), keysize=1, key.par = list(cex=0.65), lhei=c(1.5,4,1), lwid = c(1.5,4))
+dev.off()
+```
+
+```{r}
+zscore_df <- as.data.frame(heatmap_df$carpet) ##carpet score is the zscore that goes into the heatmap
+## but the above df is not ordered by dendrogram like the heatmap is
+
+##sample order of heatmap 
+colInd_df <- as.data.frame(heatmap_df$colInd)
+sample_order <- All_data %>% select(-gene) %>%
+  gather(., "Sample.ID", "value", 1:51) %>% select(-value) %>% distinct()
+sample_order$`heatmap_df$colInd` <- c(1:51)
+colInd_df <- left_join(colInd_df, sample_order, by="heatmap_df$colInd") 
+sample_ploidyinfo <- gene.stats %>% select(Sample.ID, meth_exp_group) %>% distinct()
+sample_ploidyinfo$Sample.ID <- as.character(sample_ploidyinfo$Sample.ID)
+colInd_df <- left_join(colInd_df, sample_ploidyinfo, by = "Sample.ID")
+
+# saving gene row ids to match to name and z score above 
+rowInd_df <- as.data.frame(heatmap_df$rowInd)
+rowInd_df$gene <- c(1:1447)
+rowInd_df$gene <- paste0("V", rowInd_df$gene)
+
+## testing z score output to double check order of the gene names above 
+## number below is the first row under rowInd above
+test <- All_data[1145,] 
+test <- test %>% gather("Sample.ID", "value", 2:4) %>% na.omit() ##2:4 for meth_exp_group
+test <- test %>% mutate(mean = mean(value),
+                        stdev = sd(value),
+                        zscore = (value-mean)/stdev)
+## confirmed that V1 is the first row of rowInd_df which is row 642 in All_data  
+## next steps is to bind rowInd_df with the row id and then the gene name from All_data
+All_data_gene_names <- All_data 
+All_data_gene_names$rowInd <- c(1:1447)
+#All_data_gene_names$rowInd <- as.character(All_data_gene_names$rowInd)
+
+zscore_modified <- zscore_df %>% 
+  rownames_to_column(., var = "meth_exp_group") %>% na.omit() %>%
+  gather("gene", "zscore", 2:1448) %>%
+  left_join(., rowInd_df, by = "gene") %>%
+  dplyr::rename(., rowInd = `heatmap_df$rowInd`) %>%
+  left_join(., All_data_gene_names, by = ("rowInd")) %>% #select(-c(6:58)) %>%
+  dplyr::rename(., gene_number = gene.x) %>%
+  dplyr::rename(., gene = gene.y) %>% #left_join(., ploidyinfo, by=c("Sample.ID")) %>%
+  # mutate(meth_exp_group = case_when(
+  #   group == "Group1" ~ "T1",
+  #   group == "Group2" ~ "T1",
+  #   group == "Group3" ~ "T2",
+  #   group == "Group4" ~ "T2",
+  #   group == "Group5" ~ "D",
+  #   group == "Group6" ~ "D"
+  # )) %>%
+  dplyr::rename(meth_D = D) %>%
+  dplyr::rename(meth_T1 = T1) %>%
+  dplyr::rename(meth_T2 = T2) %>%
+  spread(meth_exp_group, zscore)
+zscore_modified$rowInd <- as.character(zscore_modified$rowInd)
+## now I can subset to the conditions I want 
+
+# Genes that are hypermethylated in Triploidy 2 (and not in Triploidy 1 or Diploidy) = 122 genes
+hypermeth_trip2 <- zscore_modified %>% filter(T2 > 1) 
+# Genes that are hypermethylated in Triploidy 1 (and not in Triploidy 2 or Diploidy)  = 138 genes
+hypermeth_trip1 <- zscore_modified %>% filter(T1 > 1) 
+# Genes that are hypermethylated in Diploidy (and not in Triploidy 2 or Triploidy 1)  = 460 genes
+hypermeth_dip <- zscore_modified %>% filter(D > 1) 
+
+hypermeth_trip2 %>% write.csv("data/WGBS/output/DMG_hypermeth_triploidy2.csv")
+hypermeth_trip1 %>% write.csv("data/WGBS/output/DMG_hypermeth_triploidy1.csv")
+hypermeth_dip %>% write.csv("data/WGBS/output/DMG_hypermeth_diploidy.csv")
+
+hypermeth_trip2 <- read.csv("data/WGBS/output/DMG_hypermeth_triploidy2.csv")
+hypermeth_trip1 <- read.csv("data/WGBS/output/DMG_hypermeth_triploidy1.csv")
+hypermeth_dip <- read.csv("data/WGBS/output/DMG_hypermeth_diploidy.csv")
+```
+
+Plotting the hypermeth levels above 
+
+```{r}
+#hypermeth_trip2_plot <- hypermeth_trip2 %>% 
+#hypermeth_trip1_plot <- hypermeth_trip1 %>% 
+hypermeth_dip_plot <- hypermeth_dip %>% 
+  dplyr::select(gene, meth_D, meth_T1, meth_T2) %>%
+  gather("meth_exp_group", "per.meth", 2:4) %>%
+    # mutate(loci_status = case_when(
+    #       per.meth <= 10 ~ "unmethylated",
+    #       per.meth > 10 & per.meth < 50 ~ "sparsely methylated",
+    #       per.meth >= 50 ~ "methylated")) %>%
+  ggplot(., aes(x=meth_exp_group, y=per.meth, color=meth_exp_group)) + theme_bw() + xlab("") +
+  geom_boxplot() + geom_jitter(size=1, alpha=0.3, width=0.2) + 
+  #facet_wrap(~loci_status, scales = "free_y") +
+  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+  theme(strip.text.x = element_text(size = 10, color = "black", face = "bold"),
+        strip.text.y = element_text(size = 10, color = "black", face = "bold")) +
+  theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
+
+ggsave(filename="data/WGBS/output/figures/hypermeth_dip.jpeg", 
+       plot=hypermeth_dip_plot, dpi=300, width=4, height=3, units="in")
+
+## statistics on the above 
+hypermeth_stats <- hypermeth_trip2 %>% 
+  dplyr::select(gene, meth_D, meth_T1, meth_T2) %>%
+  gather("meth_exp_group", "per.meth", 2:4)
+
+aov <- aov(per.meth ~ meth_exp_group, data=hypermeth_stats)
+summary(aov)
+TukeyHSD(aov)
+```
+
+
+# Principal Components Analysis & PERMANOVA 
+
+## ALL 
+
+## Creating matrix table
+
+```{r}
+## Create summary means for all genes with at least 5 methylated positions
+pca.means.df <- aggregate(per.meth ~ gene*Sample.ID, data=meth_table5x_filtered, FUN=mean)
+pca.means.df2 <- pca.means.df[pca.means.df$gene %in% DMG_5x_sig$gene,]
+
+# transform df so column names are gene names 
+All_data2 <- pca.means.df %>% 
+  pivot_wider(names_from = gene, values_from = per.meth) %>%
+  na.omit()
+
+rownames(All_data2) <- paste0(All_data2$Sample.ID)
+```
+
+## Running prcomp function 
+
+```{r}
+scaled_pca_all <-prcomp(All_data2[c(2:ncol(All_data2))], scale=FALSE, center=TRUE)
+fviz_eig(scaled_pca_all)
+
+coral_info <- All_data2[c(1)]
+
+pca_data_all <- scaled_pca_all%>%
+  broom::augment(coral_info)%>%
+  group_by(Sample.ID)%>%
+  mutate(PC1.mean = mean(.fittedPC1),
+         PC2.mean = mean(.fittedPC2))
+```
+
+## Examine PERMANOVA results.
+
+```{r}
+# scale data
+vegan_all <- scale(All_data2[c(2:ncol(All_data2))])
+
+# PERMANOVA 
+permanova_all <- adonis2(vegan_all ~ group*ploidy, 
+                         data = pca_data_all, method='eu', permutations = 9999)
+capture.output(permanova_all, file = "data/WGBS/output/statistics/ploidy_PERMANOVA_all.txt")
+```
+
+## Assemble plot with background points
+
+```{r}
+#adding percentages on axis
+names(pca_data_all)[3] <- "PCA1"
+names(pca_data_all)[4] <- "PCA2"
+names(pca_data_all)[5] <- "PCA3"
+names(pca_data_all)[6] <- "PCA4"
+percentage_all <- round((scaled_pca_all$sdev^2) / sum((scaled_pca_all$sdev^2)) * 100, 2)
+percentage_all <- paste(colnames(pca_data_all[3:55]), "(",paste(as.character(percentage_all), "%", ")", sep="") )
+
+## adding treatment column to visualize 
+pca_data_all$Sample.ID <- as.character(pca_data_all$Sample.ID)
+pca_data_all <- left_join(pca_data_all, ploidyinfo, by = c("Sample.ID")) %>%
+  left_join(., meta, by = c("Sample.ID", "ploidy", "group", "treesplit", "Clade")) %>%
+  #subset(!group == "Group7" & !group == "Ungroup") %>%
+  mutate(meth_exp_group = case_when(
+    group == "Group1" ~ "T1",
+    group == "Group2" ~ "T1",
+    group == "Group3" ~ "T2",
+    group == "Group4" ~ "T2",
+    group == "Group5" ~ "D",
+    group == "Group6" ~ "D",
+    group == "Group7" ~ "ungroup",
+    group == "Ungroup" ~ "ungroup"
+  ))
+
+PCA_plot <- ggplot(pca_data_all, aes(PCA1, PCA2, color=meth_exp_group)) + #, label=Sample.ID
+  geom_point(size = 4, aes(shape = ploidy)) +
+  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen", "pink3")) + #;  "darkgreen"
+  #scale_colour_manual(values = c("blue", "lightblue", "salmon", "red3")) +
+  scale_shape_manual(values=c(21, 17)) +
+  theme_classic()+
+  #geom_label() +
+  ylab(percentage_all[2])+
+  xlab(percentage_all[1])+
+  #labs(color = "Group", shape = "Ploidy") + 
+  #labs(color = "Treatment", shape = "Timepoint") +
+  theme(legend.text = element_text(size=18), 
+        legend.position="right",
+        plot.background = element_blank(),
+        legend.title = element_text(size=20), 
+        plot.margin = margin(1, 1, 1, 1, "cm"),
+        axis.text = element_text(size=18), 
+        title = element_text(size=25, face="bold"), 
+        axis.title = element_text(size=18))
+
+ggsave(filename="data/WGBS/output/figures/PCA_all_group_PerMeth.jpeg", plot=PCA_plot, dpi=300, width=9, height=7.5, units="in")
+```
+
+Plot meth percent for Figure 2. 
+
+```{r}
+## make sure above pca.means.df is run only for the entire dataset not the significant genes 
+#pca.means.df.env <- aggregate(per.meth ~ Sample.ID, data=pca.means.df, FUN=mean)
+pca.means.df.env <- summarySE(pca.means.df, measurevar = c("per.meth"), groupvars = c("Sample.ID"))
+pca.means.df.env$Sample.ID <- as.character(pca.means.df.env$Sample.ID)
+pca.means.df.env <- left_join(pca.means.df.env, meta, by = c("Sample.ID"))
+
+pca.means.df.env.plot <- pca.means.df.env %>%
+  filter(!is.na(ploidy)) %>%
+  ggplot(., aes(x=Timepoint, y=per.meth, color=Treatment, shape=ploidy)) + #, label=Sample.ID
+  geom_jitter(size=2.5, width=0.3) + scale_shape_manual(values=c(21, 17)) + #geom_label() +
+  ylab("CpG % methylation") +
+  # geom_errorbar(aes(ymin=per.meth-se, ymax=per.meth+se), 
+  #               linewidth=0.5, width=.075, position=position_dodge(),
+  #               linetype = "dotted") +
+  theme_bw() + scale_colour_manual(values = c("blue", "lightblue", "salmon", "red3")) 
+## 1225 pink top; 2197 blue top 
+
+ggsave(filename="data/WGBS/output/figures/env_permeth_all.jpeg", plot=pca.means.df.env.plot, dpi=300, width=6, height=5, units="in")
+
+pca.means.df.env2 <- left_join(pca.means.df, meta, by=c("Sample.ID"))
+pca.means.df.env2 <- summarySE(pca.means.df.env2, measurevar = c("per.meth"), groupvars = c("Treatment", "Timepoint"))
+
+pca.means.df.env.plot2 <- pca.means.df.env2 %>%
+  filter(!is.na(Treatment)) %>%
+  ggplot(., aes(x=Timepoint, y=per.meth, color=Treatment, group=Treatment)) + 
+  geom_point(size=2.5) + geom_line() +
+  ylab("CpG % methylation") +
+  geom_errorbar(aes(ymin=per.meth-se, ymax=per.meth+se),linewidth=0.5, width=.075) +
+  theme_bw() + scale_colour_manual(values = c("blue", "lightblue", "salmon", "red3")) 
+
+ggsave(filename="data/WGBS/output/figures/env_permeth_all2.jpeg", plot=pca.means.df.env.plot2, dpi=300, width=6, height=5, units="in")
+
+stats3 <- lm(per.meth ~ Timepoint*Temperature*CO2, 
+               na.action=na.omit, data=pca.means.df.env)
+
+qqPlot(residuals(stats3)) 
+hist(residuals(stats3))
+
+t1 <- aov(per.meth ~ Timepoint*Temperature*CO2, 
+               na.action=na.omit, data=pca.means.df.env)
+
+stats3.anova <- Anova(stats3, ddf="lme4", type='III')
+
+library(multcomp)
+emmeans(stats3, pairwise ~ Timepoint*Temperature*CO2)
+```
+
+

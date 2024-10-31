@@ -1,0 +1,121 @@
+---
+title: "DESeq.Rmd"
+author: "Emma Strand"
+date: "2023-11-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# DESeq2 for methylation data
+
+Previous data from `DMG-Pacuta.Rmd` file.
+
+## Load libraries 
+
+```{r}
+library("tidyverse")
+library("genefilter")
+library(impute)
+library(preprocessCore)
+library("DESeq2")
+library("RColorBrewer")
+library("WGCNA")
+library("flashClust")
+library("gridExtra")
+library("ComplexHeatmap")
+library("goseq")
+library("dplyr")
+library("clusterProfiler")
+library("pheatmap")
+library("magrittr")
+library("vegan")
+library("factoextra")
+library("dplyr")
+library(readxl)
+
+library(Matrix)
+```
+
+## Load metadata 
+
+```{r}
+metadata <- read.csv("data/WGBS/output/meth_pattern_groups.csv")
+```
+
+
+## Load data 
+
+CpGs that occur in all samples for genes with 5X CpG coverage and >5 CpG sites per gene. Second dataframe is the results from signifiance test from `DMG-Pacuta.Rmd` file. We removed 1225 and 2197 from the analysis.
+
+I'm not conducting any more pre-filtering b/c we know these sites show up in all samples.
+
+```{r}
+## all genes
+meth_table5x_filtered <- read.csv("data/WGBS/output/allgenes5x_filtered.csv") %>% 
+  dplyr::select(-X) %>% distinct() %>%
+  filter(!Sample.ID == "1225") %>% 
+  filter(!Sample.ID == "2197")
+
+## below function takes a long time, let it run
+meth_data <- meth_table5x_filtered %>% dplyr::select(position, Sample.ID, per.meth) %>%
+  spread(Sample.ID, per.meth)
+
+mat <- (sparseMatrix(as.integer(factor(meth_data$position)), 
+                                  as.integer(factor(meth_data$Sample.ID)), x=meth_data$per.meth))
+```
+
+### Double checking the metadata is in the same order as the meta_data frame
+
+```{r}
+# Display current order of metadata and gene count matrix.  
+metadata$sample_id
+colnames(meth_data)
+
+#Order metadata the same as the column order in the gene matrix.  
+list<-colnames(meth_data)
+list<-as.factor(list)
+
+metadata$sample_id<-as.factor(metadata$sample_id)
+
+# Re-order the levels
+metadata$sample_id <- factor(as.character(metadata$sample_id), levels=list)
+
+# Re-order the data.frame
+metadata_ordered <- metadata[order(metadata$sample_id),]
+metadata_ordered$sample_id 
+
+#Checking that all row and column names match. Should return "TRUE"
+all(rownames(metadata$sample_id) %in% colnames(meth_data))
+all(rownames(metadata$sample_id) == colnames(meth_data)) 
+```
+
+## Construct DESeq2 data set
+
+Create a DESeqDataSet design from gene count matrix and labels. Here we set the design to look at groups to test for any differences in gene expression across Date and Phenotype. 
+
+```{r}
+#Set DESeq2 design
+gdds <- DESeqDataSetFromMatrix(countData = meth_data,
+                              colData = metadata_ordered,
+                              design = ~ploidy)
+```
+
+### Volcano plot 
+
+```{r}
+# initial analysis run
+dds_DE <- DESeq(gdds)
+# likelihood ratio test on 'Pathotype'
+dds_LRT <- DESeq(gdds, test = "LRT", reduced = ~ ploidy, parallel = TRUE) 
+
+# create 'volc3d' class object for plotting
+res <- deseq_polar(dds_DE, dds_LRT, "Pathotype")
+
+# plot 3d volcano plot
+volcano3D(res)
+```
+
+

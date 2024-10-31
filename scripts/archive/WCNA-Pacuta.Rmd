@@ -1,0 +1,903 @@
+---
+title: "WCNA for DNA Methylation - Mcapitata"
+author: "EL Strand"
+output:
+  github_document: default
+  pdf_document:
+    keep_tex: yes
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Weighted Correlation Network Analysis for DNA methylation data 
+
+Read https://bioinformaticsworkbook.org/tutorials/wgcna.html#gsc.tab=0 along with this script! Explains concepts and rationale for choosing thresholds, etc. 
+
+## Pipeline Overview
+
+1. Data preparation
+  + Load and format clean data
+  + Data filtering: PoverA and genefilter
+  + Outlier detection
+2. Network construction and consensus modlue detection
+  + Choosing a soft-thresholding power: Analysis of a network topology β
+  + Co-expression adjacency and topological overlap matrix similarity
+  + Clustering using TOM
+  + Module idenification using dynamicTreeCut
+3. Correlate groups/timepoints
+4. Plot module-trait associations
+5. Plot eigennene over groupings
+6. Calculating gene significance and module membership
+
+This pipeline is modified from AH: 
+* https://github.com/AHuffmyer/EarlyLifeHistory_Energetics/blob/master/Mcap2020/Scripts/Metabolomics/metabolomics_WGCNA.Rmd
+
+and KW: https://github.com/kevinhwong1/Thermal_Transplant_Molecular/blob/main/scripts/WGBS_GM.Rmd starting at line 1551. 
+
+### Load packages 
+
+```{r}
+## install packages if you dont already have them in your library
+if ("tidyverse" %in% rownames(installed.packages()) == 'FALSE') install.packages('tidyverse') 
+if ("vegan" %in% rownames(installed.packages()) == 'FALSE') install.packages('vegan') 
+if ("ggplot2" %in% rownames(installed.packages()) == 'FALSE') install.packages('ggplot2') 
+if ("factoextra" %in% rownames(installed.packages()) == 'FALSE') install.packages('factoextra') 
+if ("ggfortify" %in% rownames(installed.packages()) == 'FALSE') install.packages('ggfortify') 
+if ("naniar" %in% rownames(installed.packages()) == 'FALSE') install.packages('naniar') 
+if ("cowplot" %in% rownames(installed.packages()) == 'FALSE') install.packages('cowplot') 
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+if ("mixOmics" %in% rownames(installed.packages()) == 'FALSE') BiocManager::install("mixOmics") 
+if ("RVAideMemoire" %in% rownames(installed.packages()) == 'FALSE') install.packages('RVAideMemoire') 
+if ("VennDiagram" %in% rownames(installed.packages()) == 'FALSE') install.packages('VennDiagram') 
+if ("broom" %in% rownames(installed.packages()) == 'FALSE') install.packages('broom') 
+
+#load packages
+library("ggplot2")
+library('vegan')
+library('factoextra')
+library('ggfortify')
+library('naniar')
+library('cowplot')
+library("mixOmics")
+library("tidyverse")
+library("RVAideMemoire")
+library("VennDiagram")
+library("broom")
+
+
+if ("genefilter" %in% rownames(installed.packages()) == 'FALSE') install.packages('genefilter') 
+if ("DESeq2" %in% rownames(installed.packages()) == 'FALSE') install.packages('DESeq2') 
+if ("RColorBrewer" %in% rownames(installed.packages()) == 'FALSE') install.packages('RColorBrewer') 
+if ("WGCNA" %in% rownames(installed.packages()) == 'FALSE') install.packages('WGCNA') 
+if ("flashClust" %in% rownames(installed.packages()) == 'FALSE') install.packages('flashClust') 
+if ("gridExtra" %in% rownames(installed.packages()) == 'FALSE') install.packages('gridExtra') 
+if ("ComplexHeatmap" %in% rownames(installed.packages()) == 'FALSE') install.packages('ComplexHeatmap') 
+if ("goseq" %in% rownames(installed.packages()) == 'FALSE') install.packages('goseq') 
+if ("dplyr" %in% rownames(installed.packages()) == 'FALSE') install.packages('dplyr') 
+if ("clusterProfiler" %in% rownames(installed.packages()) == 'FALSE') install.packages('clusterProfiler') 
+if ("pheatmap" %in% rownames(installed.packages()) == 'FALSE') install.packages('pheatmap') 
+if ("magrittr" %in% rownames(installed.packages()) == 'FALSE') install.packages('magrittr') 
+
+library("genefilter")
+library("DESeq2")
+library("RColorBrewer")
+library("WGCNA")
+library("flashClust")
+library("gridExtra")
+library("ComplexHeatmap")
+library("goseq")
+library("dplyr")
+library("clusterProfiler")
+library("pheatmap")
+library("magrittr")
+library("reshape2")
+```
+
+# Data preparation
+
+## Input data files 
+
+Input for this script generated in `DMG-Pacuta.Rmd` -- run those code chunks and then start this script. 
+
+### metadata
+
+```{r}
+### use `meta` from DMG-Mcap script 
+head(meta) 
+
+clade2 <- clade2 %>% dplyr::rename(Sample.ID = Plug_ID)
+
+meta_WCNA <- meta %>% left_join(., clade2, by="Sample.ID")
+```
+### Methylation data 
+
+```{r}
+#manipulating dataframe so sample IDs are the columns and genes are the rows (values are percent methylation of that gene)
+## use `meth_table.means.ID` from DMG-Pacuta script
+head(meth_meansID)
+
+gcount <- meth_meansID %>% 
+  dplyr::select(-Temperature, -CO2, -Timepoint, 
+                -N, -sd, -se, -ci, -CpG_ratio, -status) %>%
+  spread(key = "Sample.ID", value = "per.meth") %>%
+  column_to_rownames(var="gene")
+
+#Check that there are no genes with 0 counts for all samples. Should return TRUE.
+rowSums(dplyr::count(gcount)) > 0
+```
+
+
+## Data filtering: PoverA and genefilter
+
+Conduct data filtering, this includes:  
+
+*pOverA*: Specifying the minimum count for a proportion of samples for each gene. Here, we are using a pOverA of 0.25. This is because we have 59 samples with a minimum of n=2 samples per group. Therefore, we will accept genes that are present in 2/59 = 0.03 of the samples because we expect different expression by life stage. We are further setting the minimum percentage of genes to 1, such that 3% of the samples must have a methylation percentage >1% methylated in order for the gene to remain in the data set.  
+
+Filter in the package "genefilter". Pre-filtering our dataset to reduce the memory size dataframe, increase the speed of the transformation and testing functions, and improve quality of statistical analysis by removing low-coverage counts. Removed counts could represent outliers in the data and removing these improves sensitivity of statistical tests.    
+
+``` {r, echo=TRUE, warning=FALSE, message=FALSE}
+filt <- filterfun(pOverA(0.03,0.1)) #consider changing
+#create filter for the counts data
+gfilt <- genefilter(gcount, filt)
+#identify genes to keep by count filter
+keep <- gcount[gfilt,]
+#identify gene lists
+n.keep <- rownames(keep)
+#gene count data filtered in PoverA, P percent of the samples have counts over A
+data_filt <- as.data.frame(gcount[which(rownames(gcount) %in% n.keep),])
+#How many rows do we have before and after filtering?
+nrow(gcount) #Before = 9,647
+nrow(data_filt) #After = 9,647
+#Filtering removed 0 genes
+```
+
+## Outlier detection
+
+### Checking that all row and column names match. Should return "TRUE"
+
+``` {r, echo=TRUE, warning=FALSE, message=FALSE}
+all(rownames(meta$Sample.ID) %in% colnames(data_filt)) ##TRUE 
+all(rownames(meta$Sample.ID) == colnames(data_filt)) ##TRUE 
+```
+
+
+### Plot the sample tree: Open a graphic output window of size 12 by 9 inches
+
+The user should change the dimensions if the window is too large or too small.
+
+```{r}
+sampleTree = hclust(dist(data_filt), method = "average");
+pdf("data/WGBS/output/WCNA/WCNA_outliers_genes.pdf")
+plot(sampleTree, main = "Sample clustering to detect outliers", sub="", xlab="", cex.lab = 1.5, cex.axis = 1.5, cex.main = 2)
+dev.off()
+#no gene outliers
+
+## 2197 and 1225 don't have data
+data_filt <- data_filt %>%
+  dplyr::select(-`1225`, -`2197`)
+
+#Transpose such that samples are in rows and genes are in columns.
+tdata_filt <- t(data_filt) 
+
+#Look for outliers by examining tree of samples  
+sampleTree = hclust(dist(tdata_filt), method = "average");
+# Plot the sample tree: Open a graphic output window of size 12 by 9 inches
+# The user should change the dimensions if the window is too large or too small.
+pdf("data/WGBS/output/WCNA/outliers_samples.pdf")
+plot(sampleTree, main = "Sample clustering to detect outliers", sub="", xlab="", cex.lab = 1.5, cex.axis = 1.5, cex.main = 2)
+dev.off()
+```
+
+
+# Network construction and consensus modlue detection
+
+## Choosing a soft-thresholding power: Analysis of a network topology β
+
+```{r}
+allowWGCNAThreads() 
+#Create a string of numbers from 1 through 10, and even numbers from 10 through 20
+powers <- c(c(1:20), seq(from = 12, to=20, by=2)) 
+
+# Call the network topology analysis function
+sft <-pickSoftThreshold(tdata_filt, powerVector = powers, verbose = 10)
+#Plot the results.  
+sizeGrWindow(9, 5)
+par(mfrow = c(1,2));
+cex1 = 0.9;
+# # # Scale-free topology fit index as a function of the soft-thresholding power
+plot(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
+      xlab="Soft Threshold (power)",ylab="Scale Free Topology Model Fit,signed R^2",type="n",
+     main = paste("Scale independence"));
+ text(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
+     labels=powers,cex=cex1,col="red");
+# # # this line corresponds to using an R^2 cut-off
+ abline(h=0.8,col="red")
+# # # Mean connectivity as a function of the soft-thresholding power
+ plot(sft$fitIndices[,1], sft$fitIndices[,5],
+     xlab="Soft Threshold (power)",ylab="Mean Connectivity", type="n",
+     main = paste("Mean connectivity"))
+ text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
+ # Soft Threshold power is 5 (could even push to 4 but start with 5 to be conservative)
+```
+
+## Create modules based on soft threshold power above 
+
+``` {r, echo=TRUE, warning=FALSE, message=FALSE}
+picked_power = 5
+temp_cor <- cor       
+cor <- WGCNA::cor                                             # Force it to use WGCNA cor function (fix a namespace conflict issue)
+netwk <- blockwiseModules(tdata_filt,                         # <= input here
+                          # == Adjacency Function ==
+                          power = picked_power,               # <= power here
+                          networkType = "unsigned",
+                          # == Tree and Block Options ==
+                          deepSplit = 2,
+                          pamRespectsDendro = F,
+                          # detectCutHeight = 0.75,
+                          minModuleSize = 30,                  #condsider inreasing or decreasing this
+                          maxBlockSize = 4000,
+                          # == Module Adjustments ==
+                          reassignThreshold = 0,
+                          mergeCutHeight = 0.25,
+                          # == TOM == Archive the run results in TOM file (saves time)
+                          saveTOMs = T,
+                          saveTOMFileBase = "ER",
+                          # == Output Options
+                          numericLabels = T,
+                          verbose = 3)
+cor <- temp_cor     # Return cor function to original namespace
+
+# Convert labels to colors for plotting
+mergedColors = labels2colors(netwk$colors)
+
+# Plot the dendrogram and the module colors underneath
+plotDendroAndColors(
+  netwk$dendrograms[[1]],
+  mergedColors[netwk$blockGenes[[1]]],
+  "Module colors",
+  dendroLabels = FALSE,
+  hang = 0.03,
+  addGuide = TRUE,
+  guideHang = 0.05 )
+```
+
+# Relate Module (cluster) Assignments to Sample.ID 
+
+``` {r, echo=TRUE, warning=FALSE, message=FALSE}
+module_df <- data.frame(
+  gene = names(netwk$colors),
+  colors = labels2colors(netwk$colors)
+)
+
+module_df[1:5,]
+write.csv(module_df, "data/WGBS/output/WCNA/gene_modules.csv")
+
+module_counts <- module_df %>% dplyr::count(colors)
+
+# Get Module Eigengenes per cluster
+MEs <- moduleEigengenes(tdata_filt, mergedColors)$eigengenes
+
+# Reorder modules so similar modules are next to each other
+MEs <- orderMEs(MEs)
+module_order = names(MEs) %>% gsub("ME","", .)
+
+# Add Sample names
+MEs0 <- MEs
+MEs0$Sample.ID = row.names(MEs)
+
+# tidy & plot data
+mME = MEs0 %>%
+  pivot_longer(-Sample.ID) %>%
+  mutate(
+    name = gsub("ME", "", name),
+    name = factor(name, levels = module_order)
+  )
+
+mME_plot <-  mME %>% ggplot(., aes(x=Sample.ID, y=name, fill=value)) +
+  geom_tile() +
+  theme_bw() +
+  scale_fill_gradient2(
+    low = "blue",
+    high = "red",
+    mid = "white",
+    midpoint = 0,
+    limit = c(-1,1)) +
+  theme(axis.text.x = element_text(angle=90)) +
+  labs(title = "Module-Sample Relationships", y = "Modules", fill="corr")
+
+ggsave(filename="data/WGBS/output/WCNA/Module_samples.jpeg", 
+       plot=mME_plot, dpi=300, width=6, height=5, units="in")
+```
+
+
+# Relate Module (cluster) Assignments to Groupings 
+
+Prepare trait data. Data has to be numeric, so I will substitute time points/phenotypes for numeric values. The "trait" we are considering here is Grouping.   
+
+Make a dataframe that has a column for each lifestage name and a row for samples. Populate a 1 for samples that match each Group and a 0 for samples not matching respective Groups 
+
+This process changes Groups from a categorical variable into a binary variable. This will allow for correlations between mean eigengenes and Groups  
+
+### Transform trait data
+
+```{r}
+sample_list <- data_filt %>%
+  rownames_to_column(., var="gene") %>%
+  gather(., "Sample.ID", "per.meth", 2:58) %>% 
+  select(Sample.ID) %>% distinct()
+
+meta_WGBS <- meta_WCNA
+meta_WGBS <- meta_WGBS[meta_WGBS$Sample.ID %in% sample_list$Sample.ID,]
+meta_WGBS$num <- c("1")
+
+##### env
+CO2Traits <- as.data.frame(pivot_wider(meta_WGBS, names_from = CO2, values_from = num, id_cols = Sample.ID))
+CO2Traits[is.na(CO2Traits)] <- c("0")
+CO2Traits <- CO2Traits %>% dplyr::rename(HighCO2 = High) %>% dplyr::rename(AmbientCO2 = Ambient)
+
+TimeTraits <- as.data.frame(pivot_wider(meta_WGBS, names_from = Timepoint, values_from = num, id_cols = Sample.ID))
+TimeTraits[is.na(TimeTraits)] <- c("0")
+
+TempTrait <- as.data.frame(pivot_wider(meta_WGBS, names_from = Temperature, values_from = num, id_cols = Sample.ID))
+TempTrait[is.na(TempTrait)] <- c("0")
+TempTrait <- TempTrait %>% dplyr::rename(HighTemp = High) %>% dplyr::rename(AmbientTemp = Ambient)
+
+allTraits <- full_join(CO2Traits, TempTrait, by = "Sample.ID") %>% full_join(., TimeTraits, by = "Sample.ID")
+#####
+
+##### ploidy
+treesplitTraits <- as.data.frame(pivot_wider(meta_WGBS, names_from = treesplit, values_from = num, id_cols = Sample.ID))
+treesplitTraits[is.na(treesplitTraits)] <- c("0")
+#####
+
+rownames(treesplitTraits) <- treesplitTraits$Sample.ID
+datTraits <- treesplitTraits[,c(-1)]
+```
+
+### Define numbers of genes and samples and print
+
+```{r}
+nGenes = ncol(tdata_filt)
+nSamples = nrow(tdata_filt)
+nGenes #9647
+nSamples#57
+```
+
+### Correlations of traits with eigengenes
+
+```{r}
+Colors=sub("ME", "", names(MEs))
+moduleTraitCor = cor(MEs, datTraits, use = "p");
+moduleTraitPvalue = corPvalueStudent(moduleTraitCor, nSamples);
+moduleTraitTree = hclust(dist(t(moduleTraitCor)), method = "average")
+pdf(file="data/WGBS/output/WCNA/ModuleTraitClusterTree.pdf", height=8, width=22)
+plot(moduleTraitTree)
+dev.off()
+```
+
+### Correlations of metabolites with eigengenes. Calculate correlations between ME's and groups 
+
+```{r}
+moduleGeneCor=cor(MEs, tdata_filt)
+moduleGenePvalue = corPvalueStudent(moduleGeneCor, nSamples);
+```
+
+# Plot module-trait associations
+
+Represent module trait correlations as a heat map 
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+textMatrix = paste(signif(moduleTraitCor, 2), "\n(",signif(moduleTraitPvalue, 1), ")", sep = "")
+dim(textMatrix) = dim(moduleTraitCor)
+head(textMatrix)
+
+pdf(file="data/WGBS/output/WCNA/Module-trait-relationships.pdf")
+labeledHeatmap(Matrix = moduleTraitCor, xLabels = names(datTraits),  yLabels = names(MEs), ySymbols = names(MEs), cex.lab.y= 0.55, cex.lab.x= 0.55, colors = blueWhiteRed(50), textMatrix = textMatrix, setStdMargins = TRUE, cex.text = 0.4, textAdj = , zlim = c(-1,1), main = paste("Module-trait relationships"))
+dev.off()
+```
+
+# Generate a complex heatmap of module-trait relationships.  
+
+```{r}
+#bold sig p-values
+#dendrogram with WGCNA MEtree cut-off
+#colored y-axis
+#Create list of pvalues for eigengene correlation with specific life stages
+heatmappval <- signif(moduleTraitPvalue, 1)
+#Make list of heatmap row colors
+htmap.colors <- names(MEs)
+htmap.colors <- gsub("ME", "", htmap.colors)
+library(dendsort)
+row_dend = dendsort(hclust(dist(moduleTraitCor)))
+col_dend = dendsort(hclust(dist(t(moduleTraitCor))))
+
+pdf(file = "data/WGBS/output/WCNA/Module-trait-relationship-heatmap.pdf", height = 8, width = 8)
+ht <- Heatmap(moduleTraitCor, name = "Eigenvalue", cluster_rows = row_dend, cluster_columns = FALSE,
+        col = blueWhiteRed(50), 
+        row_names_side = "left",
+        row_dend_side = "left",
+        width = unit(5, "in"),
+        height = unit(4.5, "in"), 
+        row_gap = unit(2.5, "mm"), 
+        border = TRUE,
+        cell_fun = function(j, i, x, y, w, h, col) {
+        if(heatmappval[i, j] < 0.051) {
+            grid.text(sprintf("%s", heatmappval[i, j]), x, y, 
+                      gp = gpar(fontsize = 10, fontface = "bold"))
+        }
+        else {
+            grid.text(sprintf("%s", heatmappval[i, j]), x, y, 
+                      gp = gpar(fontsize = 10, fontface = "plain", col = "grey"))
+        }},
+        column_names_gp =  gpar(fontsize = 12, border=FALSE),
+        column_names_rot = 45,
+        row_names_gp = gpar(fontsize = 12, alpha = 0.75, border = FALSE))
+draw(ht)
+dev.off()
+
+group_order<-c("D", "T1", "T2")
+
+pdf(file = "data/WGBS/output/WCNA/Module-trait-relationship-heatmap2.pdf", height = 8, width = 8)
+Heatmap(moduleTraitCor, name = "Eigenvalue", 
+        row_title = "Gene Module", column_title = "Eigengene Correlation", 
+        col = blueWhiteRed(50), 
+        row_names_side = "left", 
+        #row_dend_side = "left",
+        width = unit(5, "in"), 
+        height = unit(4.5, "in"), 
+        #column_dend_reorder = TRUE, 
+        #cluster_columns = col_dend,
+        row_dend_reorder = TRUE,
+        #column_split = 6,
+        row_split=6,
+        #column_dend_height = unit(.5, "in"),
+        column_order = group_order, 
+        cluster_rows = row_dend, 
+        row_gap = unit(2.5, "mm"), 
+        border = TRUE,
+        cell_fun = function(j, i, x, y, w, h, col) {
+        if(heatmappval[i, j] < 0.051) {
+            grid.text(sprintf("%s", heatmappval[i, j]), x, y, 
+                      gp = gpar(fontsize = 10, fontface = "bold"))
+        }
+        else {
+            grid.text(sprintf("%s", heatmappval[i, j]), x, y, 
+                      gp = gpar(fontsize = 10, fontface = "plain", col = "grey"))
+        }},
+        column_names_gp =  gpar(fontsize = 12, border=FALSE),
+        column_names_rot = 35,
+        row_names_gp = gpar(fontsize = 12, alpha = 0.75, border = FALSE))
+dev.off()
+```
+
+# Eigengene 
+
+#### Create dataframe that associates module colors with clusters based on the above heatmap and the MEtree dendrogram.
+```{r}
+MEcluster1 <- data.frame(moduleColor = c("darkturquoise", "turquoise", "blue", "green", "lightcyan", "lightyellow", "purple"), moduleCluster = c(1))
+MEcluster2 <- data.frame(moduleColor = c("black", "grey", "brown"), moduleCluster = c(2))
+MEcluster3 <- data.frame(moduleColor = c("royalblue", "pink"), moduleCluster = c(3))
+MEcluster4 <- data.frame(moduleColor = c("magenta", "cyan", "red", "grey60", "darkred", "yellow", "midnightblue", "tan"), moduleCluster = c(4))
+MEcluster5 <- data.frame(moduleColor = c("darkgreen", "salmon", "lightgreen"), moduleCluster = c(5))
+MEcluster6 <- data.frame(moduleColor = c("greenyellow", "darkgrey"), moduleCluster = c(6))
+moduleCluster = bind_rows(MEcluster1, MEcluster2, MEcluster3, MEcluster4, MEcluster5, MEcluster6)
+head(moduleCluster)
+```
+
+View module eigengene data and make dataframe for Strader plots.
+```{r}
+head(MEs)
+names(MEs)
+Strader_MEs <- MEs %>% 
+  rownames_to_column(., var="Sample.ID") %>%
+  left_join(., meta_WGBS, by="Sample.ID") %>%
+  gather(., "moduleColor", "eigenvalue", 2:26) %>%
+  mutate(., moduleColor = str_remove(moduleColor, "ME")) %>%
+  left_join(., moduleCluster, by="moduleColor") %>%
+  filter(!is.na(moduleCluster))
+
+head(Strader_MEs)
+```
+
+#### Calculate six over-arching expression patterns using mean eigengene for each module in a cluster
+
+```{r}
+Strader_MEs_stats <- summarySE(Strader_MEs, measurevar = c("eigenvalue"), 
+                               groupvars = c("treesplit", "moduleCluster"))
+
+Strader_MEplot <- Strader_MEs %>%
+  ggplot(., aes(x=treesplit, y=eigenvalue, color=treesplit)) +
+  geom_boxplot() +
+  geom_jitter(alpha=0.15) +
+  theme_classic() + xlab("") + ylab("") +
+  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+  geom_hline(yintercept = 0, linetype="dashed", color = "grey")+
+  #geom_errorbar(data = Strader_MEs_stats, aes(ymin=eigenvalue-se, ymax=eigenvalue+se), size=0.8, width=.1) +
+  #geom_point(data = Strader_MEs_stats, aes(x=treesplit, y=eigenvalue), size=2) +
+  #geom_line(data=Strader_MEs_stats, aes(group = Bleach), size=0.8) +
+  facet_wrap(~moduleCluster, scales="free_y") +
+  theme(axis.text.x=element_text(angle = 90, vjust = 0.5, hjust=1, size = 12), #set x-axis label size
+        strip.text.x = element_text(size = 14, face = c("bold")),
+        axis.title.x=element_text(size = 12), #set x-axis title size
+        axis.ticks.x=element_blank(), #No x-label ticks
+        #axis.title.y=element_blank(), #No y-axis title
+        axis.text.y=element_text(size = 12), #set y-axis label size, 
+        panel.border = element_rect(color = "black", fill = NA, size = 1), #set border
+        panel.grid.major = element_blank(), #Set major gridlines
+        panel.grid.minor = element_blank(), #Set minor gridlines
+        axis.line = element_line(colour = "black"), #Set axes color
+        plot.background=element_blank(),
+        plot.title = element_text(size=22))
+
+ggsave(filename="data/WGBS/output/WCNA/straderplot.jpeg", 
+       plot=Strader_MEplot, dpi=300, width=8, height=6, units="in")
+```
+
+
+
+
+## Eigengene 
+
+View module eigengene data and make dataframe for Strader plots.  
+```{r}
+# creating df
+eig_df <- MEs %>% rownames_to_column(., var="Sample.ID") %>%
+  select(Sample.ID, MEgreenyellow, MEbrown, MEdarkturquoise, MEdarkgrey, 
+         MEblack, MEgreen, MEcyan, MEred, MEblue) %>%
+  gather(., key="Module", value="eigengene_value", 2:10) %>% 
+  left_join(., meta, by = "Sample.ID") %>%
+  mutate(Timepoint = factor(Timepoint, levels = c("30 hour", "2 week", "4 week", "8 week", "12 week")))
+
+eig_df_means <- summarySE(eig_df, measurevar = c("eigengene_value"), 
+                                 groupvars = c("Module", "Temperature", "CO2", "Timepoint", "Treatment"))
+
+eig_df_means %>%
+  subset(Module == "MEgreenyellow") %>%
+  ggplot(aes(x=Timepoint, y=eigengene_value, group=Timepoint, colour=Treatment)) +
+  geom_point() + #geom_line() +
+  ylab("Mean Module Eigenegene") +
+  geom_errorbar(aes(ymin=eigengene_value-se, ymax=eigengene_value+se), linewidth=0.5, width=.075) +
+  scale_colour_manual(values = c("blue", "lightblue", "salmon", "red3")) + #set line color
+  geom_hline(yintercept = 0, linetype="dashed", color = "grey")+
+  theme_bw() + 
+  theme(axis.text.x=element_text(angle = 45, vjust = 0.5, hjust=1, size = 12), #set x-axis label size
+        axis.title.x=element_text(size = 14), #set x-axis title size
+        axis.ticks.x=element_blank(), #No x-label ticks
+        #axis.title.y=element_blank(), #No y-axis title
+        axis.text.y=element_text(size = 14), #set y-axis label size, 
+        panel.border = element_rect(color = "black", fill = NA, size = 1), #set border
+        panel.grid.major = element_blank(), #Set major gridlines
+        panel.grid.minor = element_blank(), #Set minor gridlines
+        axis.line = element_line(colour = "black"), #Set axes color
+        plot.background=element_blank(),
+        plot.title = element_text(size=22))
+
+eig_dfplot <- eig_df %>%
+  unite(., group, Treatment, Timepoint, remove = FALSE) %>%
+ # subset(Module == "MEblack" | Module == "MEdarkgrey" | Module == "MEbrown" | Module == "MEgreenyellow") %>%
+  ggplot(aes(x=Timepoint, y=eigengene_value, color=Treatment)) + 
+  geom_jitter(alpha=0.1) + 
+  #geom_line(., aes(group=group)) + 
+  scale_colour_manual(values = c("blue", "lightblue", "salmon", "red3")) + #set line color
+  geom_point(data = eig_df_means, aes(x=Timepoint, y=eigengene_value), size=1.5) +
+  geom_errorbar(data = eig_df_means, aes(ymin=eigengene_value-se, ymax=eigengene_value+se), size=0.5, width=.1) +
+  theme_classic() + xlab("") + 
+  ylab("Mean Module Eigenvalue") +
+  facet_wrap(~Module, scales="free_y") +
+  geom_hline(yintercept = 0, linetype="dashed", color = "grey")
+
+ggsave(filename="data/WGBS/output/WCNA/eigengene_expression_full.jpeg", 
+       plot=eig_dfplot, dpi=300, width=14, height=10, units="in")
+
+eig_df_subset <- eig_df %>%
+  subset(Module == "MEblack" | Module == "MEdarkgrey" | Module == "MEbrown" | Module == "MEgreenyellow")
+
+eig_df_subset_means <- eig_df_means %>%
+  unite(., group, Treatment, Timepoint, remove = FALSE) %>%
+  subset(Module == "MEblack" | Module == "MEdarkgrey" | Module == "MEbrown" | Module == "MEgreenyellow")
+
+eig_dfplot2 <- eig_df_subset %>%
+  ggplot(aes(x=Timepoint, y=eigengene_value, color=Treatment, group=Treatment)) + 
+  geom_jitter(alpha=0.1, size=2) + 
+  geom_errorbar(data = eig_df_subset_means, aes(ymin=eigengene_value-se, ymax=eigengene_value+se), size=0.5, width=.1) +
+  geom_line(data=eig_df_subset_means) + 
+  scale_colour_manual(values = c("blue", "lightblue", "salmon", "red3")) + #set line color
+  geom_point(data = eig_df_subset_means, aes(x=Timepoint, y=eigengene_value), size=3) +
+  theme_classic() + xlab("") + 
+  ylab("Mean Module Eigenevalue") +
+  facet_wrap(~Module, scales="free_y") +
+  geom_hline(yintercept = 0, linetype="dashed", color = "grey") +
+  theme(legend.text = element_text(size=18), 
+        legend.position="right",
+        plot.background = element_blank(),
+        legend.title = element_text(size=20),
+        strip.text.x = element_text(size = 16, face = "bold.italic"),
+        plot.margin = margin(1, 1, 1, 1, "cm"),
+        axis.text = element_text(size=18), 
+        title = element_text(size=25, face="bold"), 
+        axis.title = element_text(size=18))
+
+ggsave(filename="data/WGBS/output/WCNA/eigengene_expression_subset.jpeg", 
+       plot=eig_dfplot2, dpi=300, width=14, height=10, units="in")
+```
+# Gene ontology for ploidy modules 
+
+Group 3: royalblue, pink
+Group 6: greenyellow, dark grey 
+
+Using `gene_meta` from DMG-Pacuta.Rmd
+
+```{r}
+module_df_annot <- merge(module_df, gene_meta, by="gene", all.x=TRUE)
+```
+
+## Subsetting for a gene list for each module
+
+```{r}
+mod_group3 <- module_df_annot %>% dplyr::filter(colors == "royalblue" | colors == "pink") #353 genes
+mod_group6 <- module_df_annot %>% dplyr::filter(colors == "greenyellow" | colors == "darkgrey") #246 genes
+```
+
+## Executing GOenrichment for each module
+
+`goenrich5x` function from GO-DMG.Rmd
+
+### Group 3 
+
+```{r}
+#black
+## 119/353 of those genes are annotated 
+GOenrich_group3 <- goenrich5x(mod_group3, group3)
+GOenrich_group3_2 <- GOenrich_group3 %>% 
+  select(-GO_ID) %>%
+  filter(over_represented_pvalue != "NA") %>%
+  filter(!is.na(term)) %>%
+  distinct(gene, .keep_all = TRUE) #keep_all = keep all columns; 
+  
+GOenrich_group3_2 <- GOenrich_group3_2[,c(1:2,24:31)]
+
+GOenrich_group3_2$GeneRatio <- GOenrich_group3_2$numDEInCat / GOenrich_group3_2$numInCat
+unique(GOenrich_group3_2$gene) #169 annotated
+
+write.csv(GOenrich_group3_2 , file = "data/WGBS/output/WCNA/GOenrich_ploidy_group3.csv")
+```
+
+### Group 6
+
+```{r}
+## 121/246 of those genes are annotated 
+GOenrich_group6 <- goenrich5x(mod_group6, group6)
+GOenrich_group6_2 <- GOenrich_group6 %>% 
+  select(-GO_ID) %>%
+  filter(over_represented_pvalue != "NA") %>%
+  filter(!is.na(term)) %>%
+  distinct(gene, .keep_all = TRUE) #keep_all = keep all columns; 
+  
+GOenrich_group6_2 <- GOenrich_group6_2[,c(1:2,24:31)]
+
+GOenrich_group6_2$GeneRatio <- GOenrich_group6_2$numDEInCat / GOenrich_group6_2$numInCat
+unique(GOenrich_group6_2$gene) #169 annotated
+
+write.csv(GOenrich_group6_2 , file = "data/WGBS/output/WCNA/GOenrich_ploidy_group6.csv")
+```
+##### creating one df 
+
+```{r}
+GOdf <- bind_rows(GOenrich_group6_2, GOenrich_group3_2)
+
+GOdfplot <- GOdf %>%
+  #subset(colors == "greenyellow" | colors == "darkgrey") %>%
+  ggplot(aes(x = (GeneRatio*100), y = reorder(GOSlim_bin, GeneRatio), fill = over_represented_pvalue)) +
+  xlab("% of genes involved") +
+  scale_y_discrete(position = "right") +
+  geom_hline(aes(yintercept = GOSlim_bin), linetype = "dotted", color = "grey") +
+  geom_point(size = 5, shape = 21, color = "black") +
+  theme_bw() + 
+  facet_grid(~colors) +
+  theme(panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(), 
+    axis.line = element_line(colour = "black"),
+    legend.text=element_text(size=15), legend.title=element_text(size=20),
+    strip.text.y = element_text(size = 20),
+    strip.text.x = element_text(size = 20),
+    axis.text = element_text(size = 15, color = "black"),
+    axis.title.x = element_text(size = 20),
+    axis.title.y = element_blank(), 
+    legend.position = "right") 
+
+ggsave(filename="data/WGBS/output/WCNA/GOenrich_ploidy_bin_plot.png", 
+       plot=GOdfplot, dpi=300, width=18, height=12, units="in")
+
+GOdfplot2 <- GOdf %>%
+  subset(colors == "greenyellow" | colors == "darkgrey") %>%
+  ggplot(aes(x = numDEInCat, y = reorder(term, numDEInCat), fill = over_represented_pvalue)) +
+  #ggplot(aes(x = (GeneRatio*100), y = reorder(term, GeneRatio), fill = over_represented_pvalue)) +
+  xlab("# of genes involved") +
+  scale_y_discrete(position = "right") +
+  geom_hline(aes(yintercept = term), linetype = "dotted", color = "grey") +
+  geom_point(size = 2, shape = 21, color = "black") +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"),
+  strip.text.y = element_text(size = 12),
+  strip.text.x = element_text(size = 12),
+  axis.text = element_text(size = 12, color = "black"),
+  axis.title.x = element_text(size = 12),
+  axis.title.y = element_blank(), 
+  legend.position = "right") +
+  facet_grid(~colors, scale="free_y")# +
+  # facet_grid(GOSlim_bin ~ colors, scale = "free_y",
+  #            labeller = label_wrap_gen(width = 4, multi_line = TRUE))
+
+ggsave(filename="data/WGBS/output/WCNA/GOenrich_ploidy_term_plot_group6_2.png", 
+       plot=GOdfplot2, dpi=300, width=12, height=8, units="in")
+```
+
+
+# Gene ontology for sigificant modules
+
+Modules to subset: 
+- black 
+- brown 
+- darkgrey 
+- greenyellow 
+
+
+## Annotating modules with GO ID 
+
+Using `gene_meta` from DMG-Pacuta.Rmd
+
+```{r}
+module_df_annot <- merge(module_df, gene_meta, by="gene", all.x=TRUE)
+```
+
+## Subsetting for a gene list for each module
+
+```{r}
+mod_black <- module_df_annot %>% dplyr::filter(colors == "black") #408 genes
+mod_brown <- module_df_annot %>% dplyr::filter(colors == "brown") #700 genes
+mod_darkgrey <- module_df_annot %>% dplyr::filter(colors == "darkgrey") #39 genes
+mod_greenyellow <- module_df_annot %>% dplyr::filter(colors == "greenyellow") #207 genes
+```
+
+
+## Executing GOenrichment for each module
+
+`goenrich5x` function from GO-DMG.Rmd
+
+### Black 
+
+```{r}
+#black
+## 169/408 of those genes are annotated 
+GOenrich_black <- goenrich5x(mod_black, black)
+GOenrich_black2 <- GOenrich_black %>% 
+  select(-GO_ID) %>%
+  filter(over_represented_pvalue != "NA") %>%
+  filter(!is.na(term)) %>%
+  distinct(gene, .keep_all = TRUE) #keep_all = keep all columns; 
+  
+GOenrich_black2 <- GOenrich_black2[,c(1:2,24:31)]
+
+GOenrich_black2$GeneRatio <- GOenrich_black2$numDEInCat / GOenrich_black2$numInCat
+unique(GOenrich_black2$gene) #169 annotated
+
+write.csv(GOenrich_black2 , file = "data/WGBS/output/WCNA/GOenrich_black.csv")
+```
+
+### Brown 
+
+```{r}
+#brown
+## 359/700 of those genes are annotated 
+GOenrich_brown <- goenrich5x(mod_brown, brown)
+GOenrich_brown <- GOenrich_brown %>% 
+  select(-GO_ID) %>%
+  filter(over_represented_pvalue != "NA") %>%
+  filter(!is.na(term)) %>%
+  distinct(gene, .keep_all = TRUE) #keep_all = keep all columns; 
+  
+GOenrich_brown2 <- GOenrich_brown[,c(1:2,24:31)]
+
+GOenrich_brown2$GeneRatio <- GOenrich_brown2$numDEInCat / GOenrich_brown2$numInCat
+unique(GOenrich_brown2$gene) #359 annotated
+
+write.csv(GOenrich_brown2 , file = "data/WGBS/output/WCNA/GOenrich_brown.csv")
+```
+
+### Dark grey 
+
+```{r}
+#darkgrey 
+## 20/39 of those genes are annotated 
+GOenrich_darkgrey <- goenrich5x(mod_darkgrey, darkgrey)
+GOenrich_darkgrey <- GOenrich_darkgrey %>% 
+  select(-GO_ID) %>%
+  filter(over_represented_pvalue != "NA") %>%
+  filter(!is.na(term)) %>%
+  distinct(gene, .keep_all = TRUE) #keep_all = keep all columns; 
+  
+GOenrich_darkgrey2 <- GOenrich_darkgrey[,c(1:2,24:31)]
+
+GOenrich_darkgrey2$GeneRatio <- GOenrich_darkgrey2$numDEInCat / GOenrich_darkgrey2$numInCat
+unique(GOenrich_darkgrey2$gene) #20 annotated
+
+write.csv(GOenrich_darkgrey2 , file = "data/WGBS/output/WCNA/GOenrich_darkgrey.csv")
+```
+
+### greenyellow 
+
+```{r}
+#greenyellow 
+## 101/207 of those genes are annotated 
+GOenrich_greenyellow <- goenrich5x(mod_greenyellow, greenyellow)
+GOenrich_greenyellow <- GOenrich_greenyellow %>% 
+  select(-GO_ID) %>%
+  filter(over_represented_pvalue != "NA") %>%
+  filter(!is.na(term)) %>%
+  distinct(gene, .keep_all = TRUE) #keep_all = keep all columns; 
+  
+GOenrich_greenyellow2 <- GOenrich_greenyellow[,c(1:2,24:31)]
+
+GOenrich_greenyellow2$GeneRatio <- GOenrich_greenyellow2$numDEInCat / GOenrich_greenyellow2$numInCat
+unique(GOenrich_greenyellow2$gene) #101 annotated
+
+write.csv(GOenrich_greenyellow2 , file = "data/WGBS/output/WCNA/GOenrich_greenyellow.csv")
+```
+##### creating one df 
+
+```{r}
+GOdf <- bind_rows(GOenrich_greenyellow2, GOenrich_darkgrey2, GOenrich_brown2, GOenrich_black2)
+
+GOdf %>% left_join(., OE, by = "gene") %>%
+  subset(colors == "darkgrey") %>% filter(., status == "heavily")
+
+GOdfplot <- GOdf %>%
+  ggplot(aes(x = (GeneRatio*100), y = reorder(GOSlim_bin, GeneRatio), fill = over_represented_pvalue)) +
+  xlab("% of genes involved") +
+  scale_y_discrete(position = "right") +
+  geom_hline(aes(yintercept = GOSlim_bin), linetype = "dotted", color = "grey") +
+  geom_point(size = 5, shape = 21, color = "black") +
+  theme_bw() + 
+  facet_grid(~colors) +
+  theme(panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(), 
+    axis.line = element_line(colour = "black"),
+    legend.text=element_text(size=15), legend.title=element_text(size=20),
+    strip.text.y = element_text(size = 20),
+    strip.text.x = element_text(size = 20),
+    axis.text = element_text(size = 20, color = "black"),
+    axis.title.x = element_text(size = 20),
+    axis.title.y = element_blank(), 
+    legend.position = "right") 
+
+ggsave(filename="data/WGBS/output/WCNA/GOenrich_bin_plot.png", 
+       plot=GOdfplot, dpi=300, width=18, height=12, units="in")
+
+
+GOdfplot2 <- GOdf %>%
+  ggplot(aes(x = (GeneRatio*100), y = reorder(term, GeneRatio), fill = over_represented_pvalue)) +
+  xlab("% of genes involved") +
+  scale_y_discrete(position = "right") +
+  geom_hline(aes(yintercept = term), linetype = "dotted", color = "grey") +
+  geom_point(size = 2, shape = 21, color = "black") +
+  theme_bw() + theme(panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"),
+  strip.text.y = element_text(size = 15),
+  strip.text.x = element_text(size = 15),
+  axis.text = element_text(size = 15, color = "black"),
+  axis.title.x = element_text(size = 15),
+  axis.title.y = element_blank(), 
+  legend.position = "right") +
+  facet_grid(GOSlim_bin ~ colors, scale = "free_y",
+             labeller = label_wrap_gen(width = 2, multi_line = TRUE))
+
+ggsave(filename="data/WGBS/output/WCNA/GOenrich_term_plot.png", 
+       plot=GOdfplot2, dpi=300, width=12, height=18, units="in")
+```
+
+

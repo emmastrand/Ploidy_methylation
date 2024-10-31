@@ -1,0 +1,556 @@
+---
+title: "Genomic Feature"
+author: "Author: Emma Strand; emma_strand@uri.edu"
+output:
+  github_document: default
+  pdf_document:
+    keep_tex: yes
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Genomic Feature Analysis 
+
+## Install Packages
+
+```{r}
+library(plyr)
+require(RColorBrewer)
+require(dichromat)
+require(compositions)
+require(vegan)
+require(cluster)
+require(dplyr)
+require(tibble)
+require(tidyr)
+require(ggplot2)
+require(lme4)
+require(RColorBrewer)
+require(Rmisc)
+```
+
+## Import metadata 
+
+### Filter metadata from larger project 
+
+```{r}
+# meta <- read.csv("data/Master_Fragment.csv", header=TRUE) %>%
+#   filter(ANALYSIS == "Molecular" | ANALYSIS == "Physiology/Molecular") %>%
+#   write.csv("data/Molecular_metadata.csv")
+```
+
+### Read in metadata file 
+
+```{r}
+meta <- read.csv("data/Molecular_metadata.csv", header=TRUE) %>% select(-X)
+meta$Plug_ID <- as.character(meta$Plug_ID)
+meta$Timepoint <- as.factor(meta$Timepoint)
+meta$Timepoint <- factor(meta$Timepoint, levels=c("0 hour","6 hour","12 hour","30 hour",
+                                                    "Day 1","1 week","2 week","4 week","6 week",
+                                                    "8 week", "12 week", "16 week"))
+``` 
+
+## CpG Methylation Status 
+
+### Total 
+
+```{r}
+total_covX5 <- read.table("data/WGBS/genomic_feature/Pacuta-v2-5x-bedgraph-counts.txt", 
+                 header = FALSE, col.names = c("totalLines", "filename"))
+total_covX5 <- total_covX5[-58,] #Remove last row (total lines for all files)
+
+total_covX10 <- read.table("data/WGBS/genomic_feature/Pacuta-v2-10x-bedgraph-counts.txt", 
+                 header = FALSE, col.names = c("totalLines", "filename"))
+total_covX10 <- total_covX10[-58,] #Remove last row (total lines for all files)
+```
+
+### Methylated
+
+```{r}
+meth_covX5 <- read.table("data/WGBS/genomic_feature/Pacuta-v2-5x-Meth-counts.txt",
+                         header = FALSE, col.names = c("Meth", "filename"))
+meth_covX5 <- meth_covX5[-58,] #Remove last row (total lines for all files)
+
+meth_covX10 <- read.table("data/WGBS/genomic_feature/Pacuta-v2-10x-Meth-counts.txt",
+                         header = FALSE, col.names = c("Meth", "filename"))
+meth_covX10 <- meth_covX10[-58,] #Remove last row (total lines for all files)
+```
+
+### Sparsely methylated
+
+```{r}
+spmeth_covX5 <- read.table("data/WGBS/genomic_feature/Pacuta-v2-5x-sparseMeth-counts.txt",
+                         header = FALSE, col.names = c("sparseMeth", "filename"))
+spmeth_covX5 <- spmeth_covX5[-58,] #Remove last row (total lines for all files)
+
+spmeth_covX10 <- read.table("data/WGBS/genomic_feature/Pacuta-v2-10x-sparseMeth-counts.txt",
+                         header = FALSE, col.names = c("sparseMeth", "filename"))
+spmeth_covX10 <- spmeth_covX10[-58,] #Remove last row (total lines for all files)
+```
+
+### Unmethylated 
+
+```{r}
+unmeth_covX5 <- read.table("data/WGBS/genomic_feature/Pacuta-v2-5x-unMeth-counts.txt",
+                         header = FALSE, col.names = c("unMeth", "filename"))
+unmeth_covX5 <- unmeth_covX5[-58,] #Remove last row (total lines for all files)
+
+unmeth_covX10 <- read.table("data/WGBS/genomic_feature/Pacuta-v2-10x-unMeth-counts.txt",
+                         header = FALSE, col.names = c("unMeth", "filename"))
+unmeth_covX10 <- unmeth_covX10[-58,] #Remove last row (total lines for all files)
+```
+
+## Create summary table 
+
+```{r}
+all_5X <- cbind(total_covX5, meth_covX5, spmeth_covX5, unmeth_covX5) 
+rownames(all_5X) <- substr(meth_covX5$filename, start = 58, stop = 61)
+all_5X <- all_5X[,-c(2,4,6,8)] #Remove filename columns
+
+all_10X <- cbind(total_covX10, meth_covX10, spmeth_covX10, unmeth_covX10) 
+rownames(all_10X) <- substr(meth_covX10$filename, start = 58, stop = 61)
+all_10X <- all_10X[,-c(2,4,6,8)] #Remove filename columns
+
+head(all_5X)
+head(all_10X)
+```
+### Calculate percent methylation 
+
+```{r}
+all_5X$percentMeth <- (all_5X$Meth / all_5X$totalLines) * 100 #Calculate percent methylated loci
+all_10X$percentMeth <- (all_10X$Meth / all_10X$totalLines) * 100 #Calculate percent methylated loci
+
+all_5X$percentSparseMeth <- (all_5X$sparseMeth / all_5X$totalLines) * 100 #Calculate percent sparsely methylated loci
+all_10X$percentSparseMeth <- (all_10X$sparseMeth / all_10X$totalLines) * 100 #Calculate percent sparsely methylated loci
+
+all_5X$percentUnMeth <- (all_5X$unMeth / all_5X$totalLines) * 100 #Calculate percent unmethylated loci
+all_10X$percentUnMeth <- (all_10X$unMeth / all_10X$totalLines) * 100 #Calculate percent unmethylated loci
+
+all_5X <- all_5X[,c(1, 2, 5, 3, 6, 4, 7)] #Reorganize columns
+all_10X <- all_10X[,c(1, 2, 5, 3, 6, 4, 7)] #Reorganize columns
+
+head(all_5X) #Confirm calculations
+head(all_10X) #Confirm calculations
+```
+
+### Merge with metadata 
+
+```{r}
+all_5X <- tibble::rownames_to_column(all_5X, "Plug_ID") 
+
+all_5X %>% write.table("data/WGBS/genomic_feature/CpG-percent-5x.txt", 
+              sep = "\t", quote = FALSE, row.names = TRUE)
+
+all_10X <- tibble::rownames_to_column(all_10X, "Plug_ID")
+
+all_10X %>% write.table("data/WGBS/genomic_feature/CpG-percent-5x.txt", 
+              sep = "\t", quote = FALSE, row.names = TRUE)
+
+all_5X_meta <- merge(all_5X, meta, by = "Plug_ID")
+all_10X_meta <- merge(all_10X, meta, by = "Plug_ID")
+```
+
+## CpG Genomic location 
+
+1. Downstream flanks 
+2. Flanks 
+3. Upstream flanks
+4. Gene (Transcript)
+5. Intergenic (Error in previous script don't have this yet)
+6. Intron (Original gff file has no introns)
+7. CDS 
+
+```{r}
+#Import file with CG motif and feature track overlaps
+GenomeFeatures <- read.table("data/WGBS/genomic_feature/Pacuta-v2-CGMotif-Overlaps-counts.txt", 
+                                 header = FALSE, col.names = c("counts", "filename")) 
+
+GenomeFeatures <- GenomeFeatures[-6,] #Remove final row
+
+Meth_Status<-rep(c("All_CpGs","Methylated","Sparsely_Methylated","Unmethylated", "not bedgraph"),times=57) # change this value to the rows
+```
+
+### Transcript Overlap 
+
+#### Import file counts 
+
+fixing this in other script.. then edit out the last 3 rows instead of one
+
+```{r}
+#Import file with all file-gene overlaps
+Transcript5X <- read.table("data/WGBS/genomic_feature/Pacuta-paTranscript5X-counts.txt", 
+                               header = FALSE, col.names = c("counts", "filename")) 
+
+Transcript5X <- Transcript5X[-c(286:288),] #Remove final row
+tail(Transcript5X) #Confirm import
+
+Transcript10X <- read.table("data/WGBS/genomic_feature/Pacuta-paTranscript10X-counts.txt", 
+                               header = FALSE, col.names = c("counts", "filename")) 
+
+Transcript10X <- Transcript10X[-c(286:288),] #Remove final row
+tail(Transcript10X) #Confirm import
+```
+
+#### Transform file for methyl status 
+
+```{r}
+Transcript5X$Meth_Status <- Meth_Status
+Transcript5X$filename <- gsub("/data/putnamlab/estrand/HoloInt_WGBS/merged_cov_genomev2/","",Transcript5X$filename)
+Transcript5X$filename <- gsub("\\_..*","",Transcript5X$filename)
+Transcript5X$Feature <- "Transcript"
+colnames(Transcript5X)[2] <- "Plug_ID"
+Transcript5X <- Transcript5X %>% subset(!Meth_Status == "not bedgraph")
+
+Transcript10X$Meth_Status <- Meth_Status
+Transcript10X$filename <- gsub("/data/putnamlab/estrand/HoloInt_WGBS/merged_cov_genomev2/","",Transcript10X$filename)
+Transcript10X$filename <- gsub("\\_..*","",Transcript10X$filename)
+Transcript10X$Feature <- "Transcript"
+colnames(Transcript10X)[2] <- "Plug_ID"
+Transcript10X <- Transcript10X %>% subset(!Meth_Status == "not bedgraph")
+```
+
+### CDS 
+
+#### Import file counts 
+
+```{r}
+#Import file with all file-gene overlaps
+CDS5X <- read.table("data/WGBS/genomic_feature/Pacuta-paCDS5X-counts.txt", 
+                               header = FALSE, col.names = c("counts", "filename")) 
+
+CDS5X <- CDS5X[-c(286:288),] #Remove final row
+tail(CDS5X) #Confirm import
+
+CDS10X <- read.table("data/WGBS/genomic_feature/Pacuta-paCDS10X-counts.txt", 
+                               header = FALSE, col.names = c("counts", "filename")) 
+
+CDS10X <- CDS10X[-c(286:288),] #Remove final row
+tail(CDS10X) #Confirm import
+```
+
+#### Transform file for methyl status 
+
+```{r}
+CDS5X$Meth_Status <- Meth_Status
+CDS5X$filename <- gsub("/data/putnamlab/estrand/HoloInt_WGBS/merged_cov_genomev2/","",CDS5X$filename)
+CDS5X$filename <- gsub("\\_..*","",CDS5X$filename)
+CDS5X$Feature <- "CDS"
+colnames(CDS5X)[2] <- "Plug_ID"
+CDS5X <- CDS5X %>% subset(!Meth_Status == "not bedgraph")
+
+CDS10X$Meth_Status <- Meth_Status
+CDS10X$filename <- gsub("/data/putnamlab/estrand/HoloInt_WGBS/merged_cov_genomev2/","",CDS10X$filename)
+CDS10X$filename <- gsub("\\_..*","",CDS10X$filename)
+CDS10X$Feature <- "CDS"
+colnames(CDS10X)[2] <- "Plug_ID"
+CDS10X <- CDS10X %>% subset(!Meth_Status == "not bedgraph")
+```
+
+### Flanks 
+
+#### Import file counts 
+
+```{r}
+#Import file with all file-gene overlaps
+Flanks5X <- read.table("data/WGBS/genomic_feature/Pacuta-paFlanks5X-counts.txt", 
+                               header = FALSE, col.names = c("counts", "filename")) 
+
+Flanks5X <- Flanks5X[-c(286:288),] #Remove final row
+tail(Flanks5X) #Confirm import
+
+Flanks10X <- read.table("data/WGBS/genomic_feature/Pacuta-paFlanks10X-counts.txt", 
+                               header = FALSE, col.names = c("counts", "filename")) 
+
+Flanks10X <- Flanks10X[-c(286:288),] #Remove final row
+tail(Flanks10X) #Confirm import
+```
+
+#### Transform file for methyl status 
+
+```{r}
+Flanks5X$Meth_Status <- Meth_Status
+Flanks5X$filename <- gsub("/data/putnamlab/estrand/HoloInt_WGBS/merged_cov_genomev2/","",Flanks5X$filename)
+Flanks5X$filename <- gsub("\\_..*","",Flanks5X$filename)
+Flanks5X$Feature <- "Flanks"
+colnames(Flanks5X)[2] <- "Plug_ID"
+Flanks5X <- Flanks5X %>% subset(!Meth_Status == "not bedgraph")
+
+Flanks10X$Meth_Status <- Meth_Status
+Flanks10X$filename <- gsub("/data/putnamlab/estrand/HoloInt_WGBS/merged_cov_genomev2/","",Flanks10X$filename)
+Flanks10X$filename <- gsub("\\_..*","",Flanks10X$filename)
+Flanks10X$Feature <- "Flanks"
+colnames(Flanks10X)[2] <- "Plug_ID"
+Flanks10X <- Flanks10X %>% subset(!Meth_Status == "not bedgraph")
+```
+
+### Upstream Flanks 
+
+#### Import file counts 
+
+```{r}
+UpstreamFlanks5X <- read.table("data/WGBS/genomic_feature/Pacuta-paFlanksUpstream5X-counts.txt", 
+                               header = FALSE, col.names = c("counts", "filename")) 
+
+UpstreamFlanks5X <- UpstreamFlanks5X[-c(286:288),] #Remove final row
+tail(UpstreamFlanks5X) #Confirm import
+
+UpstreamFlanks10X <- read.table("data/WGBS/genomic_feature/Pacuta-paFlanksUpstream10X-counts.txt", 
+                               header = FALSE, col.names = c("counts", "filename")) 
+
+UpstreamFlanks10X <- UpstreamFlanks10X[-c(286:288),] #Remove final row
+tail(UpstreamFlanks10X) #Confirm import
+```
+
+#### Transform file for methyl status 
+
+```{r}
+UpstreamFlanks5X$Meth_Status <- Meth_Status
+UpstreamFlanks5X$filename <- gsub("/data/putnamlab/estrand/HoloInt_WGBS/merged_cov_genomev2/","",UpstreamFlanks5X$filename)
+UpstreamFlanks5X$filename <- gsub("\\_..*","",UpstreamFlanks5X$filename)
+UpstreamFlanks5X$Feature <- "Upstream Flanks"
+colnames(UpstreamFlanks5X)[2] <- "Plug_ID"
+UpstreamFlanks5X <- UpstreamFlanks5X %>% subset(!Meth_Status == "not bedgraph")
+
+UpstreamFlanks10X$Meth_Status <- Meth_Status
+UpstreamFlanks10X$filename <- gsub("/data/putnamlab/estrand/HoloInt_WGBS/merged_cov_genomev2/","",UpstreamFlanks10X$filename)
+UpstreamFlanks10X$filename <- gsub("\\_..*","",UpstreamFlanks10X$filename)
+UpstreamFlanks10X$Feature <- "Upstream Flanks"
+colnames(UpstreamFlanks10X)[2] <- "Plug_ID"
+UpstreamFlanks10X <- UpstreamFlanks10X %>% subset(!Meth_Status == "not bedgraph")
+```
+## Gather above data
+
+### Bind datasets together
+
+```{r}
+cpg_gf_meth5X <- rbind(Transcript5X, CDS5X, Flanks5X, UpstreamFlanks5X)
+cpg_gf_meth10X <- rbind(Transcript10X, CDS10X, Flanks10X, UpstreamFlanks10X)
+```
+
+### Calculate downstream flanks (All flanks - upstream)
+
+```{r}
+### 5X
+cpg_gf_meth5X_2 <- cpg_gf_meth5X %>% 
+  pivot_wider(names_from = Feature, values_from = counts)
+
+cpg_gf_meth5X_2$`Downstream Flanks` <- cpg_gf_meth5X_2$Flanks - cpg_gf_meth5X_2$`Upstream Flanks`
+
+# convert back to long format 
+cpg_gf_meth5X_3 <- cpg_gf_meth5X_2 %>% 
+  pivot_longer(!(c(Plug_ID, Meth_Status)), names_to = "Feature", values_to = "counts")
+
+### 10X
+cpg_gf_meth10X_2 <- cpg_gf_meth10X %>% 
+  pivot_wider(names_from = Feature, values_from = counts)
+
+cpg_gf_meth10X_2$`Downstream Flanks` <- cpg_gf_meth10X_2$Flanks - cpg_gf_meth10X_2$`Upstream Flanks`
+
+# convert back to long format 
+cpg_gf_meth10X_3 <- cpg_gf_meth10X_2 %>% 
+  pivot_longer(!(c(Plug_ID, Meth_Status)), names_to = "Feature", values_to = "counts")
+```
+
+### Calculate percentages 
+
+```{r}
+#Calculate percentages 
+### 5X
+cpg_gf_meth5X_4 <- cpg_gf_meth5X_2 %>% 
+  select(-Transcript, -Flanks) #remove gene and total flank rows
+
+cpg_gf_meth5X_4[,c(3:5)] <- round((cpg_gf_meth5X_4[,c(3:5)]/rowSums(cpg_gf_meth5X_4[,c(3:5)]))*100,2) # calculating percentages 
+
+#Convert back to long format, this is just percents
+cpg_gf_meth5X_5 <- cpg_gf_meth5X_4 %>% pivot_longer(!(c(Plug_ID, Meth_Status)), names_to = "Feature", values_to = "percent")
+
+
+### 10X
+cpg_gf_meth10X_4 <- cpg_gf_meth10X_2 %>% 
+  select(-Transcript, -Flanks) #remove gene and total flank rows
+
+cpg_gf_meth10X_4[,c(3:5)] <- round((cpg_gf_meth10X_4[,c(3:5)]/rowSums(cpg_gf_meth10X_4[,c(3:5)]))*100,2) # calculating percentages 
+
+#Convert back to long format, this is just percents
+cpg_gf_meth10X_5 <- cpg_gf_meth10X_4 %>% pivot_longer(!(c(Plug_ID, Meth_Status)), names_to = "Feature", values_to = "percent")
+
+```
+
+### Adding metadata 
+
+```{r}
+cpg_gf_meth_5X_counts <- merge(cpg_gf_meth5X_3, meta, by = "Plug_ID")
+cpg_gf_meth_10X_counts <- merge(cpg_gf_meth10X_3, meta, by = "Plug_ID")
+
+nrow(cpg_gf_meth_5X_counts) #1140 
+nrow(cpg_gf_meth_10X_counts) #1140
+
+cpg_gf_meth_5X_percent <- merge(cpg_gf_meth5X_5, meta, by = "Plug_ID")
+cpg_gf_meth_10X_percent <- merge(cpg_gf_meth10X_5, meta, by = "Plug_ID")
+
+nrow(cpg_gf_meth_5X_percent) #684 
+nrow(cpg_gf_meth_10X_percent) #684
+```
+
+Double checking the correct number of rows:
+
+counts: 57 samples x 4 meth statuses x 5 genomic features = 1140
+
+percent: 57 samples x 4 meth statuses x 3 genomic features = 684
+
+## Plotting with Barcharts and Statistics
+
+### Methylated 
+
+```{r}
+cpg_gf_meth_5X_percent %>% 
+  filter(Meth_Status == "Methylated") %>%
+  ggplot(., aes(x=Timepoint, y=percent, color = Treatment, fill = Treatment)) +
+  geom_boxplot(width=.5, outlier.shape= NA, position = position_dodge(width = 0.5), alpha = 0.7) +
+ # stat_summary(fun=mean, geom="line", aes(group=Treatment, color = Treatment), position = position_dodge(width = 0.5))  + 
+ # geom_point(pch = 21, position=position_jitterdodge(), outlier.shape= NA) +
+  scale_colour_manual(values=c("blue", "lightblue", "salmon", "red3")) +
+  scale_fill_manual(values=c("blue", "lightblue", "salmon", "red3")) +
+  theme_classic() + ggtitle("5X Methylated") +
+  theme(panel.border = element_rect(color="black", fill=NA, size=0.75), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_blank()) +
+  theme(axis.text = element_text(size = 10, color = "black"),
+        axis.title = element_text(size = 12, color = "black")) +
+  theme(axis.text.x = element_text(angle = 60, vjust = 1.2, hjust = 1.3)) + #Set the text angle
+  facet_wrap(~ Feature, scales = "free")
+
+cpg_gf_meth_10X_percent %>% 
+  filter(Meth_Status == "Methylated") %>%
+  ggplot(., aes(x=Timepoint, y=percent, color = Treatment, fill = Treatment)) +
+  geom_boxplot(width=.5, outlier.shape= NA, position = position_dodge(width = 0.5), alpha = 0.7) +
+ # stat_summary(fun=mean, geom="line", aes(group=Treatment, color = Treatment), position = position_dodge(width = 0.5))  + 
+ # geom_point(pch = 21, position=position_jitterdodge(), outlier.shape= NA) +
+  scale_colour_manual(values=c("blue", "lightblue", "salmon", "red3")) +
+  scale_fill_manual(values=c("blue", "lightblue", "salmon", "red3")) +
+  theme_classic() + ggtitle("10X Methylated") +
+  theme(panel.border = element_rect(color="black", fill=NA, size=0.75), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_blank()) +
+  theme(axis.text = element_text(size = 10, color = "black"),
+        axis.title = element_text(size = 12, color = "black")) +
+  theme(axis.text.x = element_text(angle = 60, vjust = 1.2, hjust = 1.3)) + #Set the text angle
+  facet_wrap(~ Feature, scales = "free")
+```
+
+### All CpGs 
+
+```{r}
+cpg_gf_meth_5X_percent %>% 
+  filter(Meth_Status == "All_CpGs") %>%
+  ggplot(., aes(x=Timepoint, y=percent, color = Treatment, fill = Treatment)) +
+  geom_boxplot(width=.5, outlier.shape= NA, position = position_dodge(width = 0.5), alpha = 0.7) +
+ # stat_summary(fun=mean, geom="line", aes(group=Treatment, color = Treatment), position = position_dodge(width = 0.5))  + 
+ # geom_point(pch = 21, position=position_jitterdodge(), outlier.shape= NA) +
+  scale_colour_manual(values=c("blue", "lightblue", "salmon", "red3")) +
+  scale_fill_manual(values=c("blue", "lightblue", "salmon", "red3")) +
+  theme_classic() + ggtitle("5X All_CpGs") +
+  theme(panel.border = element_rect(color="black", fill=NA, size=0.75), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_blank()) +
+  theme(axis.text = element_text(size = 10, color = "black"),
+        axis.title = element_text(size = 12, color = "black")) +
+  theme(axis.text.x = element_text(angle = 60, vjust = 1.2, hjust = 1.3)) + #Set the text angle
+  facet_wrap(~ Feature, scales = "free")
+
+cpg_gf_meth_10X_percent %>% 
+  filter(Meth_Status == "All_CpGs") %>%
+  ggplot(., aes(x=Timepoint, y=percent, color = Treatment, fill = Treatment)) +
+  geom_boxplot(width=.5, outlier.shape= NA, position = position_dodge(width = 0.5), alpha = 0.7) +
+ # stat_summary(fun=mean, geom="line", aes(group=Treatment, color = Treatment), position = position_dodge(width = 0.5))  + 
+ # geom_point(pch = 21, position=position_jitterdodge(), outlier.shape= NA) +
+  scale_colour_manual(values=c("blue", "lightblue", "salmon", "red3")) +
+  scale_fill_manual(values=c("blue", "lightblue", "salmon", "red3")) +
+  theme_classic() + ggtitle("10X All_CpGs") +
+  theme(panel.border = element_rect(color="black", fill=NA, size=0.75), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_blank()) +
+  theme(axis.text = element_text(size = 10, color = "black"),
+        axis.title = element_text(size = 12, color = "black")) +
+  theme(axis.text.x = element_text(angle = 60, vjust = 1.2, hjust = 1.3)) + #Set the text angle
+  facet_wrap(~ Feature, scales = "free")
+```
+
+### Barchart All CpGs 
+
+```{r}
+cpg_gf_meth_5X_percent_all <- cpg_gf_meth_5X_percent %>%  filter(Meth_Status == "All_CpGs")
+cpg_gf_meth_5X_percent_all_mean <- summarySE(cpg_gf_meth_5X_percent_all, 
+                                           measurevar="percent", groupvars=c("Treatment", "Timepoint", "Feature"))
+
+cpg_gf_meth_5X_percent_all_mean %>%
+  ggplot(., aes(fill=Feature, y=percent, x=Timepoint)) + 
+  geom_bar(position="fill", stat="identity", color = "black") +
+  scale_fill_brewer(palette = "YlGnBu") +
+  theme_bw() + 
+  theme(panel.border = element_rect(color="black", fill=NA, size=0.75), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_blank()) +
+  theme(axis.text = element_text(size = 15, color = "black"),
+        axis.title = element_text(size = 18, color = "black"), 
+        axis.text.x = element_text(angle = 45, hjust=1))
+
+cpg_gf_meth_10X_percent_all <- cpg_gf_meth_10X_percent %>%  filter(Meth_Status == "All_CpGs")
+cpg_gf_meth_10X_percent_all_mean <- summarySE(cpg_gf_meth_10X_percent_all, 
+                                           measurevar="percent", groupvars=c("Treatment", "Timepoint", "Feature"))
+
+cpg_gf_meth_10X_percent_all_mean %>%
+  ggplot(., aes(fill=Feature, y=percent, x=Timepoint)) + 
+  geom_bar(position="fill", stat="identity", color = "black") +
+  scale_fill_brewer(palette = "YlGnBu") +
+  theme_bw() + 
+  theme(panel.border = element_rect(color="black", fill=NA, size=0.75), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_blank()) +
+  theme(axis.text = element_text(size = 15, color = "black"),
+        axis.title = element_text(size = 18, color = "black"), 
+        axis.text.x = element_text(angle = 45, hjust=1))
+```
+
+
+```{r}
+cpg_gf_meth_5X_percent_meth <- cpg_gf_meth_5X_percent %>%  filter(Meth_Status == "Methylated")
+cpg_gf_meth_5X_percent_meth_mean <- summarySE(cpg_gf_meth_5X_percent_meth, 
+                                           measurevar="percent", groupvars=c("Treatment", "Timepoint", "Feature"))
+
+cpg_gf_meth_5X_percent_meth_mean %>%
+    ggplot(., aes(fill=Feature, y=percent, x=Timepoint)) + 
+  geom_bar(position="fill", stat="identity", color = "black") +
+  scale_fill_brewer(palette = "YlGnBu") +
+  theme_bw() + 
+  theme(panel.border = element_rect(color="black", fill=NA, size=0.75), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_blank()) +
+  theme(axis.text = element_text(size = 15, color = "black"),
+        axis.title = element_text(size = 18, color = "black"), 
+        axis.text.x = element_text(angle = 45, hjust=1))
+
+cpg_gf_meth_10X_percent_meth <- cpg_gf_meth_10X_percent %>%  filter(Meth_Status == "Methylated")
+cpg_gf_meth_10X_percent_meth_mean <- summarySE(cpg_gf_meth_10X_percent_meth, 
+                                           measurevar="percent", groupvars=c("Treatment", "Timepoint", "Feature"))
+
+cpg_gf_meth_10X_percent_meth_mean %>%
+    ggplot(., aes(fill=Feature, y=percent, x=Timepoint)) + 
+  geom_bar(position="fill", stat="identity", color = "black") +
+  scale_fill_brewer(palette = "YlGnBu") +
+  theme_bw() + 
+  theme(panel.border = element_rect(color="black", fill=NA, size=0.75), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_blank()) +
+  theme(axis.text = element_text(size = 15, color = "black"),
+        axis.title = element_text(size = 18, color = "black"), 
+        axis.text.x = element_text(angle = 45, hjust=1))
+```

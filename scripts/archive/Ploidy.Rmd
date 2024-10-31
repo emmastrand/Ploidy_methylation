@@ -1,0 +1,453 @@
+---
+title: "Ploidy analysis for DMGs"
+author: "EL Strand"
+output:
+  github_document: default
+  pdf_document:
+    keep_tex: yes
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Ploidy analysis for differentially methylated genes 
+
+Rung DMG-Pacuta.Rmd first. 
+
+## Load libraries 
+
+```{r, message=FALSE, warning=FALSE}
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(readxl)
+library(plotrix) 
+library(gridExtra)
+library(seacarb) 
+library(pheatmap)
+library(tidyr)
+library(goseq)
+library(genefilter)
+library(gplots)
+library(cowplot)
+library(lsmeans)
+library(data.table)
+library(RColorBrewer)
+library(randomcoloR)
+#library(GSEABase)
+library(ggpubr)
+library(hrbrthemes)
+library(viridis)
+library(factoextra)
+#library(ropls)
+#library(mixOmics)
+library(vegan)
+library(Rmisc)
+```
+
+### CpG OE and gene meta information calculated from prior scripts 
+
+Generated in this script: https://github.com/emmastrand/EmmaStrand_Notebook/blob/master/_posts/2022-11-19-CpG-OE-Analysis-for-DNA-Methylation.md
+
+```{r}
+eggNOGG <- read.delim(file = "data/Pocillopora_acuta_HIv2.genes.EggNog_results.txt",
+                      sep = "\t", header=TRUE) %>% dplyr::rename(gene = X.query)
+
+OE <- read.csv(file = "data/WGBS/Pacuta_CpGOE_full.csv", sep = ",",
+                 header = TRUE) %>% dplyr::rename(gene = Gene)
+
+# there is a space after each gene name.. get rid of. This was some error in CpG_OE.Rmd script 
+OE$gene <- gsub(" ","",OE$gene)
+
+#merge with annotation information
+gene_meta <- dplyr::full_join(eggNOGG, OE, by = "gene")  
+OE_NA <- gene_meta %>% subset(.,is.na(status)) ##26 genes found with no CpG O/E calculated (this gene was not in genome but in gff)
+```
+
+### DNA methylation data from prior scripts 
+
+```{r}
+meth_table5x_filtered <- read.csv("data/WGBS/output/allgenes5x_filtered.csv")
+results5x <- read.csv("data/WGBS/output/results5x.csv", header = TRUE) %>% 
+  dplyr::select(-X) %>% distinct() ## distinct() necessary in case the model above went through multiple times
+
+results5x[is.na(results5x)] <- 0
+results10x[is.na(results10x)] <- 0
+
+# Temp 
+results5x$adj.pval.Temp <- p.adjust(results5x$pval.Temp, method='BH')
+results10x$adj.pval.Temp <- p.adjust(results10x$pval.Temp, method='BH')
+
+# CO2 
+results5x$adj.pval.CO2 <- p.adjust(results5x$pval.CO2, method='BH')
+results10x$adj.pval.CO2 <- p.adjust(results10x$pval.CO2, method='BH')
+
+# Timepoint
+results5x$adj.pval.Time <- p.adjust(results5x$pval.Time, method='BH')
+results10x$adj.pval.Time <- p.adjust(results10x$pval.Time, method='BH')
+
+# Temp x CO2
+results5x$adj.pval.Temp_x_CO2 <- p.adjust(results5x$pval.Temp_x_CO2, method='BH')
+results10x$adj.pval.Temp_x_CO2 <- p.adjust(results10x$pval.Temp_x_CO2, method='BH')
+
+# Temp x Time
+results5x$adj.pval.Temp_x_Time <- p.adjust(results5x$pval.Temp_x_Time, method='BH')
+results10x$adj.pval.Temp_x_Time <- p.adjust(results10x$pval.Temp_x_Time, method='BH')
+
+# CO2 x Time  
+results5x$adj.pval.CO2_x_Time <- p.adjust(results5x$pval.CO2_x_Time, method='BH')
+results10x$adj.pval.CO2_x_Time <- p.adjust(results10x$pval.CO2_x_Time, method='BH')
+
+# Temp x CO2 x Time 
+results5x$adj.pval.Temp_x_CO2_x_Time <- p.adjust(results5x$pval.Temp_x_CO2_x_Time, method='BH')
+results10x$adj.pval.Temp_x_CO2_x_Time <- p.adjust(results10x$pval.Temp_x_CO2_x_Time, method='BH')
+
+DMG_5x_sig <- results5x %>% 
+  dplyr::select(gene, adj.pval.Temp, adj.pval.CO2, adj.pval.Time,
+                adj.pval.Temp_x_CO2, adj.pval.Temp_x_Time, adj.pval.CO2_x_Time, 
+                adj.pval.Temp_x_CO2_x_Time) %>%
+  mutate(across(2:8, round, 8)) %>% #five decimal places to get rid of scientific notation
+  filter(adj.pval.Temp < 0.050 | adj.pval.CO2 < 0.050 | adj.pval.Time < 0.050 | 
+         adj.pval.Temp_x_CO2 < 0.050 | adj.pval.Temp_x_Time < 0.050 | adj.pval.CO2_x_Time < 0.050 | 
+         adj.pval.Temp_x_CO2_x_Time < 0.050) # filter for the significant ones
+
+meth_table5x_filtered_sig <- meth_table5x_filtered[meth_table5x_filtered$gene %in% DMG_5x_sig$gene,]
+```
+
+### Ploidy and metadata information
+
+```{r}
+pacuta_clade <- read.delim2("data/clade_annotations_Pacuta.txt", header = TRUE, sep="\t") %>%
+  separate(., Sample, c("Species", "Treatment", "Timepoint", "Sample.ID")) %>% select(-Treatment, -Timepoint)
+mcap_clade <- read.delim2("data/clade_annotations_Mcapitata.txt", header = TRUE, sep="\t") %>%
+  separate(., Sample, c("Species", "Treatment", "Timepoint", "Sample.ID")) %>% select(-Treatment, -Timepoint)
+
+clade_info <- bind_rows(pacuta_clade, mcap_clade)
+
+meta <- read.csv("data/Molecular_metadata.csv") %>%
+  mutate(Timepoint = if_else(Plug_ID == "2153", "12 hour", Timepoint)) %>%
+  dplyr::rename(Sample.ID = Plug_ID) %>% 
+  dplyr::select(Sample.ID, Species, Tank, Treatment, Temperature, CO2, Timepoint, Sample.Date) 
+  
+meta$Sample.ID <- as.character(meta$Sample.ID)
+
+meta$Timepoint <- factor(meta$Timepoint, 
+                           levels = c("0 hour", "6 hour", "12 hour", "30 hour",
+                                      "1 week", "2 week", "4 week", "6 week",
+                                      "8 week", "12 week", "16 week"))
+
+meta <- left_join(meta, clade_info, by = c("Species", "Sample.ID")) 
+
+meth_pacuta_meta <- meta %>% 
+  filter(!Sample.ID=="1312") %>% #this is for a different project
+  filter(!Sample.ID=="1177") %>%
+  subset(Timepoint == "30 hour" | Timepoint == "2 week" | Timepoint == "4 week" | Timepoint == "8 week" | Timepoint=="12 week") %>%
+  subset(Species == "Pacuta")
+```
+
+# Methylation PCA 
+
+```{r}
+meth_table5x_filtered$Sample.ID <- as.character(meth_table5x_filtered$Sample.ID)
+meth_table5x_filtered <- left_join(meth_table5x_filtered, pacuta_clade, by=c("Species", "Sample.ID"))
+```
+
+## Creating matrix table
+
+```{r}
+allmeans <- aggregate(per.meth ~ gene*Temperature*CO2*Timepoint*Sample.ID, data=meth_table5x_filtered, FUN=mean)
+allmeans_sig <- allmeans[allmeans$gene %in% DMG_5x_sig$gene,]
+
+pca_data <- allmeans %>% 
+  pivot_wider(names_from = gene, values_from = per.meth) %>%
+  na.omit()  
+
+rownames(pca_data) <- paste0(pca_data$Sample.ID)
+```
+
+## Running prcomp function 
+
+```{r}
+scaled_pca_all <-prcomp(pca_data[c(5:ncol(pca_data))], scale=FALSE, center=TRUE)
+fviz_eig(scaled_pca_all)
+
+coral_info <- pca_data[c(1:4)]
+
+pca_data_all <- scaled_pca_all%>%
+  broom::augment(coral_info)%>%
+  group_by(Timepoint, Temperature, CO2, Sample.ID)%>%
+  mutate(PC1.mean = mean(.fittedPC1),
+         PC2.mean = mean(.fittedPC2)) %>%
+  left_join(., pacuta_clade, by = "Sample.ID")
+```
+
+```{r}
+#adding percentages on axis
+names(pca_data_all)[6] <- "PCA1"
+names(pca_data_all)[7] <- "PCA2"
+names(pca_data_all)[8] <- "PCA3"
+names(pca_data_all)[9] <- "PCA4"
+percentage_all <- round((scaled_pca_all$sdev^2) / sum((scaled_pca_all$sdev^2)) * 100, 2)
+percentage_all <- paste(colnames(pca_data_all[6:61]), "(",paste(as.character(percentage_all), "%", ")", sep="") )
+
+## adding treatment column to visualize 
+pca_data_all <- pca_data_all %>% 
+  unite(Treatment, Temperature, CO2, sep = " ", remove=FALSE) %>%
+  mutate(Ploidy = case_when(
+    Ploidy == 2 ~ "Diploid",
+    Ploidy == 3 ~ "Triploidy"
+  ))
+
+ploidy_pca <- ggplot(pca_data_all, aes(PCA1, PCA2, shape=Ploidy, color=Ploidy, fill=Clade)) + 
+  geom_point(size=5, alpha=0.9) +
+  scale_shape_manual(values=c(21, 24)) +
+  scale_color_manual(values = c("black", "black")) +
+  scale_fill_manual(values = c("aquamarine3", "cyan4", "blueviolet", "darkorange",
+                                 "darkturquoise", "deepskyblue2", "deeppink2", "darkblue", "deeppink4")) +
+  theme_classic()+
+  ylab(percentage_all[2])+
+  xlab(percentage_all[1])+
+  theme(legend.text = element_text(size=18), 
+        legend.position="right",
+        plot.background = element_blank(),
+        legend.title = element_text(size=20), 
+        plot.margin = margin(1, 1, 1, 1, "cm"),
+        axis.text = element_text(size=18), 
+        title = element_text(size=25, face="bold"), 
+        axis.title = element_text(size=18))
+
+ggsave(filename="data/WGBS/output/figures/PerMeth_PCA_ploidy.jpeg", plot=ploidy_pca, dpi=300, width=12, height=12, units="in")
+
+ggplot(pca_data_all, aes(PCA1, PCA2, shape=Clade, color=Ploidy, fill=Ploidy)) + 
+  geom_point(size=5, alpha=0.9) +
+  #scale_shape_manual(values=c(21, 24)) +
+  #scale_color_manual(values = c("black", "black")) +
+  #scale_fill_manual(values = c("aquamarine3", "cyan4", "blueviolet", "darkorange",
+  #                               "darkturquoise", "deepskyblue2", "deeppink2", "darkblue", "deeppink4")) +
+  theme_classic()+
+  ylab(percentage_all[2])+
+  xlab(percentage_all[1])+
+  theme(legend.text = element_text(size=18), 
+        legend.position="right",
+        plot.background = element_blank(),
+        legend.title = element_text(size=20), 
+        plot.margin = margin(1, 1, 1, 1, "cm"),
+        axis.text = element_text(size=18), 
+        title = element_text(size=25, face="bold"), 
+        axis.title = element_text(size=18))
+
+fviz_pca_ind(scaled_pca_all,
+             col.ind = pca_data_all$Ploidy, # color by groups
+             palette = c("#00AFBB",  "#FC4E07"),
+             addEllipses = TRUE, # Concentration ellipses
+             ellipse.type = "confidence",
+             legend.title = "Ploidy",
+             repel = TRUE
+             )
+```
+### WEAKLY 
+
+## Creating matrix table
+
+```{r}
+allmeans_sig_weakly <- left_join(allmeans_sig, OE, by="gene") %>% subset(., status == "weakly")
+allmeans_sig_heavily <- left_join(allmeans_sig, OE, by="gene") %>% subset(., status == "heavily")
+
+pca_data_weakly <- allmeans_sig_weakly %>% select(-CpG_ratio, -status) %>%
+  pivot_wider(names_from = gene, values_from = per.meth) %>%
+  na.omit()  
+
+rownames(pca_data_weakly) <- paste0(pca_data_weakly$Sample.ID)
+```
+
+## Running prcomp function 
+
+```{r}
+scaled_pca_all_weakly <-prcomp(pca_data_weakly[c(5:ncol(pca_data_weakly))], scale=FALSE, center=TRUE)
+fviz_eig(scaled_pca_all_weakly)
+
+pca_data_all_weakly <- scaled_pca_all_weakly%>%
+  broom::augment(coral_info)%>%
+  group_by(Timepoint, Temperature, CO2, Sample.ID)%>%
+  mutate(PC1.mean = mean(.fittedPC1),
+         PC2.mean = mean(.fittedPC2)) %>%
+  left_join(., pacuta_clade, by = "Sample.ID")
+
+#adding percentages on axis
+names(pca_data_all_weakly)[6] <- "PCA1"
+names(pca_data_all_weakly)[7] <- "PCA2"
+names(pca_data_all_weakly)[8] <- "PCA3"
+names(pca_data_all_weakly)[9] <- "PCA4"
+percentage_weakly <- round((scaled_pca_all_weakly$sdev^2) / sum((scaled_pca_all_weakly$sdev^2)) * 100, 2)
+percentage_weakly <- paste(colnames(pca_data_all_weakly[6:62]), "(",paste(as.character(pca_data_all_weakly), "%", ")", sep="") )
+
+## adding treatment column to visualize 
+pca_data_all_weakly <- pca_data_all_weakly %>% 
+  unite(Treatment, Temperature, CO2, sep = " ", remove=FALSE) %>%
+  mutate(Ploidy = case_when(
+    Ploidy == 2 ~ "Diploid",
+    Ploidy == 3 ~ "Triploidy"
+  ))
+
+ploidy_pca_weakly <- ggplot(pca_data_all_weakly, aes(PCA1, PCA2, shape=Ploidy, color=Ploidy, fill=Clade)) + 
+  geom_point(size=5, alpha=0.9) +
+  scale_shape_manual(values=c(21, 24)) +
+  scale_color_manual(values = c("black", "black")) +
+  scale_fill_manual(values = c("aquamarine3", "cyan4", "blueviolet", "darkorange",
+                                 "darkturquoise", "deepskyblue2", "deeppink2", "darkblue", "deeppink4")) +
+  theme_classic()+
+  #ylab(percentage_weakly[2])+
+  #xlab(percentage_weakly[1])+
+  theme(legend.text = element_text(size=18), 
+        legend.position="right",
+        plot.background = element_blank(),
+        legend.title = element_text(size=20), 
+        plot.margin = margin(1, 1, 1, 1, "cm"),
+        axis.text = element_text(size=18), 
+        title = element_text(size=25, face="bold"), 
+        axis.title = element_text(size=18))
+
+ggsave(filename="data/WGBS/output/figures/PerMeth_PCA_ploidy_weakly.jpeg", plot=ploidy_pca_weakly, dpi=300, width=12, height=12, units="in")
+```
+
+### HEAIVLY 
+
+```{r}
+pca_data_heavily <- allmeans_sig_heavily %>% select(-CpG_ratio, -status) %>%
+  pivot_wider(names_from = gene, values_from = per.meth) %>%
+  na.omit()  
+
+rownames(pca_data_heavily) <- paste0(pca_data_heavily$Sample.ID)
+
+scaled_pca_all_heavily <-prcomp(pca_data_heavily[c(5:ncol(pca_data_heavily))], scale=FALSE, center=TRUE)
+fviz_eig(scaled_pca_all_heavily)
+
+pca_data_all_heavily <- scaled_pca_all_heavily%>%
+  broom::augment(coral_info)%>%
+  group_by(Timepoint, Temperature, CO2, Sample.ID)%>%
+  mutate(PC1.mean = mean(.fittedPC1),
+         PC2.mean = mean(.fittedPC2)) %>%
+  left_join(., pacuta_clade, by = "Sample.ID") %>%
+  ungroup()
+
+#adding percentages on axis
+names(pca_data_all_heavily)[6] <- "PCA1"
+names(pca_data_all_heavily)[7] <- "PCA2"
+names(pca_data_all_heavily)[8] <- "PCA3"
+names(pca_data_all_heavily)[9] <- "PCA4"
+percentage_heavily <- round((scaled_pca_all_heavily$sdev^2) / sum((scaled_pca_all_heavily$sdev^2)) * 100, 2)
+percentage_heavily <- paste(colnames(pca_data_all_heavily[6:62]), "(",paste(as.character(pca_data_all_heavily), "%", ")", sep="") )
+
+## adding treatment column to visualize 
+pca_data_all_heavily <- pca_data_all_heavily %>% 
+  unite(Treatment, Temperature, CO2, sep = " ", remove=FALSE) %>%
+  mutate(Ploidy = case_when(
+    Ploidy == 2 ~ "Diploid",
+    Ploidy == 3 ~ "Triploidy"
+  ))
+
+ploidy_pca_heavily <- ggplot(pca_data_all_heavily, aes(PCA1, PCA2, shape=Ploidy, color=Ploidy, fill=Clade)) + 
+  geom_point(size=5, alpha=0.9) +
+  scale_shape_manual(values=c(21, 24)) +
+  scale_color_manual(values = c("black", "black")) +
+  scale_fill_manual(values = c("aquamarine3", "cyan4", "blueviolet", "darkorange",
+                                 "darkturquoise", "deepskyblue2", "deeppink2", "darkblue", "deeppink4")) +
+  theme_classic()+
+  #ylab(percentage_weakly[2])+
+  #xlab(percentage_weakly[1])+
+  theme(legend.text = element_text(size=18), 
+        legend.position="right",
+        plot.background = element_blank(),
+        legend.title = element_text(size=20), 
+        plot.margin = margin(1, 1, 1, 1, "cm"),
+        axis.text = element_text(size=18), 
+        title = element_text(size=25, face="bold"), 
+        axis.title = element_text(size=18))
+
+ggsave(filename="data/WGBS/output/figures/PerMeth_PCA_ploidy_heavily.jpeg", plot=ploidy_pca_heavily, dpi=300, width=12, height=12, units="in")
+```
+
+### Percent methylation 
+
+```{r}
+DMGsig_permeth <- allmeans_sig %>% 
+  left_join(., OE, by = "gene") %>% 
+  left_join(., pacuta_clade, by = "Sample.ID") %>%
+    mutate(Ploidy = case_when(
+    Ploidy == 2 ~ "Diploid",
+    Ploidy == 3 ~ "Triploidy")) %>%
+  unite(Treatment, Temperature, CO2, remove=FALSE)
+
+DMGsig_permeth_means <- summarySE(DMGsig_permeth, measurevar = c("per.meth"), 
+                                  groupvars = c("status", "Ploidy", "Treatment", "Timepoint")) 
+
+DMGsig_permeth_means$Timepoint <- factor(DMGsig_permeth_means$Timepoint, 
+                           levels = c("30 hour","2 week", "4 week",
+                                      "8 week", "12 week"))
+
+DMGsig_permeth_means %>%
+  filter(!is.na(status)) %>%
+  subset(status=="weakly") %>%
+  ggplot(., aes(x=Timepoint, y=per.meth, group=Treatment, color=Treatment)) + 
+  scale_colour_manual(values = c("blue", "lightblue", "salmon", "red3")) + #set line color
+  #scale_colour_manual(values = c("skyblue3", "olivedrab4")) + #set line color
+  theme_classic() + ylab("% methylation")+
+  geom_point(size=2) + geom_line() +
+  facet_grid(~Ploidy, scales="free_y") +
+  geom_vline(xintercept = c(4.4), colour="black", linetype="dotted") + 
+  geom_errorbar(aes(ymin=per.meth-se, ymax=per.meth+se), linewidth=0.5, width=.075) +
+  theme(strip.text.x = element_text(size = 12, color = "black", face = "bold"),
+        strip.text.y = element_text(size = 12, color = "black", face = "bold")) +
+  theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
+
+
+DMGsig_permeth_means2 <- summarySE(DMGsig_permeth, measurevar = c("per.meth"), 
+                                  groupvars = c("Sample.ID", "status")) %>% 
+  na.omit(.) %>% 
+  left_join(., meta, by = c("Sample.ID"))
+
+ploidy_trtplot <- DMGsig_permeth_means2 %>%
+  mutate(Ploidy = case_when(
+    Ploidy == 2 ~ "Diploid",
+    Ploidy == 3 ~ "Triploidy")) %>%
+  ggplot(., aes(x=Timepoint, y=per.meth, group=Treatment, color=Treatment, shape=Ploidy)) +
+  geom_jitter(size=3) +
+  scale_shape_manual(values=c(1, 17)) +
+  facet_wrap(~status, scales="free_y") +
+  scale_colour_manual(values = c("blue", "lightblue", "salmon", "red3")) + #set line color
+  theme_classic() + ylab("% methylation") +
+  geom_vline(xintercept = c(4.4), colour="black", linetype="dotted") + 
+  #geom_errorbar(aes(ymin=per.meth-se, ymax=per.meth+se), linewidth=0.5, width=.075) +
+  theme(strip.text.x = element_text(size = 12, color = "black", face = "bold"),
+        strip.text.y = element_text(size = 12, color = "black", face = "bold")) +
+  theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
+
+ggsave(filename="data/WGBS/output/figures/PerMeth_bysample.jpeg", plot=ploidy_trtplot, dpi=300, width=12, height=5, units="in")
+
+
+ploidy_trtplot <- DMGsig_permeth_means2 %>%
+  mutate(Ploidy = case_when(
+    Ploidy == 2 ~ "Diploid",
+    Ploidy == 3 ~ "Triploidy")) %>%
+  ggplot(., aes(x=Timepoint, y=per.meth, group=Temperature, color=Temperature, shape=Ploidy)) +
+  geom_jitter(size=3) +
+  scale_shape_manual(values=c(1, 17)) +
+  facet_wrap(~status, scales="free_y") +
+  #scale_colour_manual(values = c("blue", "lightblue", "salmon", "red3")) + #set line color
+  theme_classic() + ylab("% methylation") +
+  geom_vline(xintercept = c(4.4), colour="black", linetype="dotted") + 
+  #geom_errorbar(aes(ymin=per.meth-se, ymax=per.meth+se), linewidth=0.5, width=.075) +
+  theme(strip.text.x = element_text(size = 12, color = "black", face = "bold"),
+        strip.text.y = element_text(size = 12, color = "black", face = "bold")) +
+  theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
+```
+
+
+
+
+
+
