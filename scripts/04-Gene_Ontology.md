@@ -521,7 +521,7 @@ GOenrich_hypermeth_trip2_annotated <- GOenrich_hypermeth_trip2 %>%
   filter(!is.na(term)) %>%
   distinct(gene, .keep_all = TRUE) %>% #keep_all = keep all columns
   mutate(GeneRatio = numDEInCat/numInCat) %>%
-  mutate(category = "hyper triploidy 2")
+  mutate(category = "T2")
 
 GOenrich_hypometh_trip2_annotated <- GOenrich_hypometh_trip2 %>%
   dplyr::select(-GO_ID) %>%
@@ -529,7 +529,7 @@ GOenrich_hypometh_trip2_annotated <- GOenrich_hypometh_trip2 %>%
   filter(!is.na(term)) %>%
   distinct(gene, .keep_all = TRUE) %>% #keep_all = keep all columns
   mutate(GeneRatio = numDEInCat/numInCat) %>%
-  mutate(category = "hypo triploidy 2")
+  mutate(category = "T2")
 
 ## TRIP 1
 GOenrich_hypermeth_trip1_annotated <- GOenrich_hypermeth_trip1 %>%
@@ -538,7 +538,7 @@ GOenrich_hypermeth_trip1_annotated <- GOenrich_hypermeth_trip1 %>%
   filter(!is.na(term)) %>%
   distinct(gene, .keep_all = TRUE) %>% #keep_all = keep all columns; 139/399 genes annotated with term 
   mutate(GeneRatio = numDEInCat/numInCat) %>%
-  mutate(category = "hyper triploidy 1")
+  mutate(category = "T1")
 
 GOenrich_hypometh_trip1_annotated <- GOenrich_hypometh_trip1 %>%
   dplyr::select(-GO_ID) %>%
@@ -546,7 +546,7 @@ GOenrich_hypometh_trip1_annotated <- GOenrich_hypometh_trip1 %>%
   filter(!is.na(term)) %>%
   distinct(gene, .keep_all = TRUE) %>% #keep_all = keep all columns; 139/399 genes annotated with term 
   mutate(GeneRatio = numDEInCat/numInCat) %>%
-  mutate(category = "hypo triploidy 1")
+  mutate(category = "T1")
 
 ## DIPLOIDY 
 GOenrich_hypermeth_dip_annotated <- GOenrich_hypermeth_dip %>%
@@ -555,7 +555,7 @@ GOenrich_hypermeth_dip_annotated <- GOenrich_hypermeth_dip %>%
   filter(!is.na(term)) %>%
   distinct(gene, .keep_all = TRUE) %>% #keep_all = keep all columns; 470/1,056 genes annotated with term 
   mutate(GeneRatio = numDEInCat/numInCat) %>%
-  mutate(category = "hyper diploidy")
+  mutate(category = "D")
 
 GOenrich_hypometh_dip_annotated <- GOenrich_hypometh_dip %>%
   dplyr::select(-GO_ID) %>%
@@ -563,7 +563,7 @@ GOenrich_hypometh_dip_annotated <- GOenrich_hypometh_dip %>%
   filter(!is.na(term)) %>%
   distinct(gene, .keep_all = TRUE) %>% #keep_all = keep all columns; 470/1,056 genes annotated with term 
   mutate(GeneRatio = numDEInCat/numInCat) %>%
-  mutate(category = "hypo diploidy")
+  mutate(category = "D")
 
 # making large dataframe of them altogether 
 GOenrich_hypermeth_annotated_total <- 
@@ -575,82 +575,462 @@ GOenrich_hypometh_annotated_total <-
             GOenrich_hypometh_trip1_annotated, GOenrich_hypometh_dip_annotated)
 ```
 
-Left off at plotting these nicely
+Hypermeth plot
 
 ``` r
-GOplot_bin_hypermeth <- GOenrich_hypermeth_annotated_total %>%
-  dplyr::select(term, GOSlim_bin, category, numDEInCat, over_represented_pvalue) %>%
+GOenrich_hypermeth_annotated_total %>%
+  filter(ontology == "BP") %>% 
+  dplyr::select(term, GOSlim_bin, category, GeneRatio, over_represented_pvalue) %>%
   distinct() %>%
-  ggplot(aes(x = category, y = reorder(GOSlim_bin, numDEInCat), 
-             fill = over_represented_pvalue, size=numDEInCat)) +
+  ggplot(aes(x = category, y = reorder(term, GOSlim_bin), 
+             fill = over_represented_pvalue, size=GeneRatio)) +
   scale_y_discrete(position = "right") + xlab("") +
-  geom_hline(aes(yintercept = GOSlim_bin), linetype = "dotted", color = "grey") +
-  #geom_jitter(shape = 21, color = "black", width=0.3, height=0) +
-  geom_point(position = position_jitter(w = 0.2, h = 0), shape=21, color="black") +
+  geom_hline(aes(yintercept = term), linetype = "dotted", color = "grey") +
+  geom_point(position = position_jitter(w = 0, h = 0), shape=21, color="black") +
   geom_vline(aes(xintercept = 1.5), color="grey", lty = "dotted") +
   geom_vline(aes(xintercept = 2.5), color="grey", lty = "dotted") +
+  facet_grid(GOSlim_bin ~ ., scales = "free", space = "free",
+             labeller = label_wrap_gen(width = 8, multi_line = TRUE)) +
+  labs(
+    fill = "Over represented p-value",
+    size = "Gene ratio"
+  ) +
   theme_bw() + 
   theme(panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(), 
     axis.line = element_line(colour = "black"),
     legend.text=element_text(size=10), legend.title=element_text(size=10),
-    strip.text.y = element_text(size = 15),
-    strip.text.x = element_text(size = 15),
+    strip.text.y = element_text(size = 10, angle=0, face="bold"),
+    strip.clip = 'off',
+    strip.placement = "outside",
     axis.text = element_text(size = 10, color = "black"),
-    axis.title.x = element_text(size = 15),
+    axis.title.x = element_text(size = 10),
     axis.title.y = element_blank(), 
     legend.position = "right") 
-
-# ggsave(filename="data/WGBS/output/figures/GOenrich_ploidy_bin_plot_hypermeth.png", 
-#        plot=GOplot_bin_hypermeth, dpi=300, width=8, height=8, units="in")
-
-GOenrich_hypermeth_annotated_total %>%
-  filter(ontology == "BP") %>% dplyr::select(GOSlim_bin) %>% distinct() %>% arrange(GOSlim_bin)
 ```
 
-    ##                          GOSlim_bin
-    ## 1                    RNA metabolism
-    ## 2      cell cycle and proliferation
-    ## 3  cell organization and biogenesis
-    ## 4               cell-cell signaling
-    ## 5                             death
-    ## 6           developmental processes
-    ## 7        other biological processes
-    ## 8         other metabolic processes
-    ## 9                protein metabolism
-    ## 10              signal transduction
-    ## 11                  stress response
-    ## 12                        transport
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+
+![](04-Gene_Ontology_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
 ``` r
-my.order <- c("cytoskeletal activity", "kinase activity", "nucleic acid binding activity",
-              "other molecular function", "signal transduction activity", "transporter activity")
+ggsave("data/figures/GOenrich_term_hypermeth.png", dpi=300, width=9, height=10.5, units="in")
+```
 
-GOplot_bin_hypermeth2 <- GOenrich_hypermeth_annotated_total %>%
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+
+Hypometh plot
+
+``` r
+GOenrich_hypometh_annotated_total %>%
   filter(ontology == "BP") %>% 
-  #ggplot(aes(x = numDEInCat, y = reorder(term, numDEInCat), fill = over_represented_pvalue)) +
-  ggplot(aes(x = category, 
-             y = reorder(term, desc(GOSlim_bin)), 
-             fill = over_represented_pvalue, size=numDEInCat)) +
-  xlab("") +
-  scale_y_discrete(position = "right") +
+  dplyr::select(term, GOSlim_bin, category, GeneRatio, over_represented_pvalue) %>%
+  distinct() %>%
+  ggplot(aes(x = category, y = reorder(term, GOSlim_bin), 
+             fill = over_represented_pvalue, size=GeneRatio)) +
+  scale_y_discrete(position = "right") + xlab("") +
   geom_hline(aes(yintercept = term), linetype = "dotted", color = "grey") +
-  geom_point(shape = 21, color = "black") +
+  geom_point(position = position_jitter(w = 0, h = 0), shape=21, color="black") +
   geom_vline(aes(xintercept = 1.5), color="grey", lty = "dotted") +
   geom_vline(aes(xintercept = 2.5), color="grey", lty = "dotted") +
+  facet_grid(GOSlim_bin ~ ., scales = "free", space = "free",
+             labeller = label_wrap_gen(width = 8, multi_line = TRUE)) +
+  labs(
+    fill = "Over represented p-value",
+    size = "Gene ratio"
+  ) +
   theme_bw() + 
   theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), 
-        axis.line = element_line(colour = "black"),
-        strip.text.y = element_text(size = 12),
-        strip.text.x = element_text(size = 12),
-        axis.text = element_text(size = 12, color = "black"),
-        axis.title.x = element_text(size = 12),
-        axis.title.y = element_blank(), 
-        legend.position = "right") +
-  facet_grid(GOSlim_bin~., scale = "free_y",
-           labeller = label_wrap_gen(width = 2, multi_line = TRUE))
-
-# ggsave(filename="data/figures/GOenrich_ploidy_BPterm_plot_hypermeth2.png", 
-#        plot=GOplot_bin_hypermeth2, dpi=300, width=12, height=12, units="in")
+    panel.grid.minor = element_blank(), 
+    axis.line = element_line(colour = "black"),
+    legend.text=element_text(size=10), legend.title=element_text(size=10),
+    strip.text.y = element_text(size = 10, angle=0, face="bold"),
+    strip.clip = 'off',
+    strip.placement = "outside",
+    axis.text = element_text(size = 10, color = "black"),
+    axis.title.x = element_text(size = 10),
+    axis.title.y = element_blank(), 
+    legend.position = "right") 
 ```
+
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+
+![](04-Gene_Ontology_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+
+``` r
+ggsave("data/figures/GOenrich_term_hypometh.png", dpi=300, width=9.67, height=10.5, units="in")
+```
+
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
+    ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
+    ## returning NA
