@@ -90,6 +90,8 @@ GO_terms <- gene_meta %>% dplyr::select(gene, GO_ID = GOs) %>%
   mutate(across(everything(), gsub, pattern = ",", replacement = ";"),
          across(everything(), gsub, pattern = "-", replacement = NA)) %>%
   separate_rows(GO_ID, sep = ";")
+
+## move hyper and hypo files to mac book and run on that script then move output back here 
 ```
 
 ## Writing goenrichment function 
