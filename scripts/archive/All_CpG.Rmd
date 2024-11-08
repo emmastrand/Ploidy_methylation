@@ -1,0 +1,66 @@
+---
+title: "All_CpG.Rmd"
+author: "Emma Strand"
+date: "2023-11-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Analyzing the CpG positions before filtering to only positions found in all samples
+
+## Load libraries 
+
+```{r, message=FALSE, warning=FALSE}
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(readxl)
+library(plotrix) 
+library(gridExtra)
+library(pheatmap)
+library(tidyr)
+library(genefilter)
+library(gplots)
+library(cowplot)
+library(lsmeans)
+library(data.table)
+library(RColorBrewer)
+library(randomcoloR)
+library(ggpubr)
+library(hrbrthemes)
+library(viridis)
+library(factoextra)
+library(vegan)
+library(Rmisc)
+```
+
+## Load data files
+
+scp 'emma_strand@ssh3.hac.uri.edu:/data/putnamlab/estrand/HoloInt_WGBS/merged_cov_genomev2/5x_all_sample_size.txt' ~/MyProjects/Acclim_Dynamics_molecular/data/WGBS/
+
+```{r}
+data <- read.delim("data/WGBS/5x_all_sample_size.txt", header=FALSE, sep = "", 
+                   col.names = c("cpg_total", "Sample.ID")) %>% 
+  filter(cpg_total < 10000000) 
+data$Sample.ID <- substr(data$Sample.ID, 0, 4)
+```
+
+```{r}
+meta <- read.csv("data/WGBS/output/meth_pattern_groups.csv") %>% dplyr::select(-X)
+meta$Sample.ID <- as.character(meta$Sample.ID)
+
+data <- full_join(data, meta, by = "Sample.ID")
+```
+
+## plot
+
+```{r}
+data %>%
+  ggplot(., aes(x=meth_exp_group, y=cpg_total, color=meth_exp_group)) + 
+  geom_boxplot() + geom_jitter(alpha=0.5, width=0.2) + theme_bw()
+```
+

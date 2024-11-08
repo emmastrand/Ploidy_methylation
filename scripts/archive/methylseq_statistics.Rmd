@@ -1,0 +1,242 @@
+---
+title: "Methylseq statistics"
+author: "EL Strand"
+output:
+  github_document: default
+  pdf_document:
+    keep_tex: yes
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Based on Kevin Wong's methylseq analysis scripts. 
+
+## Resources 
+
+Ignore names with "_val"; https://github.com/ewels/MultiQC/issues/626
+
+```{r, installation, message=FALSE, warning=FALSE}
+# Read in required libraries
+library("reshape")
+#library(plyr)
+library("dplyr")
+library("tidyverse")
+library("Rmisc")
+library(gridExtra)
+library(ggpubr)
+library(tidyverse)
+library(ggplot2)
+library(RColorBrewer)
+library(lme4)
+library(lmerTest)
+library(car)
+library(effects)
+library(ggfortify)
+library(cowplot)
+library(vegan)
+library(corrr)
+library(ggcorrplot)
+library(GGally)
+library(broom)
+library(cowplot)
+library(arsenal)
+library(patchwork)
+library(tidyr)
+library(ggrepel)
+library(readxl)
+```
+
+## Ploidy methylseq total stats 
+
+Read in data 
+
+```{r}
+# load data
+bismark_data <- read_excel("data/WGBS/output/methylseqstats_total.xlsx", sheet = "Qualimap_Bismark") %>%
+  mutate_at(., vars(contains('Percent')), ~ (. * 100))
+bismark_data$Plug_ID = substr(bismark_data$`Sample Name`, 1, 4)
+
+fastqc_data <- read_excel("data/WGBS/output/methylseqstats_total.xlsx", sheet = "cutadapt_fastqc") %>%
+  mutate_at(., vars(contains('Percent')), ~ (. * 100))
+fastqc_data$Plug_ID = substr(fastqc_data$`Sample Name`, 1, 4)
+
+loci_numbers <- read_excel("data/WGBS/output/methylseqstats_total.xlsx", sheet = "Loci_pre_allfilt")
+loci_numbers$Plug_ID <- as.character(loci_numbers$Plug_ID)
+
+molecular_meta <- read.delim2("data/samples_Pacuta.annotations.txt", sep = "\t") %>% select(plugid, ploidy, treesplit) %>%
+  dplyr::rename(Plug_ID = plugid)
+molecular_meta$Plug_ID <- as.character(molecular_meta$Plug_ID)
+
+bismark_data <- left_join(bismark_data, molecular_meta, by = "Plug_ID") %>% 
+  left_join(., loci_numbers, by = "Plug_ID") %>%
+  dplyr::rename(`qualimap % mapped reads`=`Percent Aligned...8`) %>%
+  dplyr::rename(`bismark % aligned seqs`=`Percent Aligned...19`) %>%
+  dplyr::rename(`bismark Total aligned seqs (M)`=`M Aligned...18`) %>%
+  dplyr::rename(`No of mapped reads (M)`=`M Aligned...9`)
+fastqc_data <- left_join(fastqc_data, molecular_meta, by = "Plug_ID")
+```
+
+Plotting
+
+```{r}
+bismarkfig <- bismark_data %>% 
+  gather("metric", "value", 2:19) %>%
+  ggplot(., aes(x=ploidy, y=value, color=ploidy)) + geom_boxplot() + geom_point() +
+    facet_wrap(~metric, scales = "free_y") + theme_bw() +
+    scale_colour_manual(values = c("skyblue3", "olivedrab4")) +
+  theme(strip.text.x = element_text(size = 8, color = "black", face = "bold"),
+        strip.text.y = element_text(size = 8, color = "black", face = "bold")) +
+  theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
+
+ggsave(filename="data/WGBS/output/figures/methylseq_bismark_metrics.jpeg", 
+       plot=bismarkfig, dpi=300, width=10, height=7, units="in")
+
+fastqcfig <- fastqc_data %>% 
+  gather("metric", "value", 3:8) %>%
+  ggplot(., aes(x=ploidy, y=value, color=ploidy)) + geom_boxplot() + geom_point() +
+    facet_wrap(Trimming~metric, scales = "free_y") + theme_bw() +
+    scale_colour_manual(values = c("skyblue3", "olivedrab4")) +
+  theme(strip.text.x = element_text(size = 8, color = "black", face = "bold"),
+        strip.text.y = element_text(size = 8, color = "black", face = "bold")) +
+  theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
+
+ggsave(filename="data/WGBS/output/figures/methylseq_fastqc_metrics.jpeg", 
+       plot=fastqcfig, dpi=300, width=8, height=6, units="in")
+
+bismark_data %>%  
+  ggplot(., aes(x=ploidy, y=Loci, color=ploidy)) + geom_boxplot() + geom_point() +
+  scale_colour_manual(values = c("skyblue3", "olivedrab4")) + theme_bw()
+```
+
+Statistics 
+
+```{r}
+t.test(`Percent mCpG` ~ ploidy, data=bismark_data)
+
+bismark_data %>% group_by(ploidy) %>%
+  tally()
+```
+
+
+
+
+
+
+## Methylseq trial stats 
+
+Read in df
+
+```{r}
+## read in methylseq stats csv 
+```
+
+
+Plotting 
+
+```{r}
+# for each plug ID x Trimming
+data %>% select(1:23) %>%
+  gather(measurement, value, 8:23) %>%
+  ggplot(., aes(x=PlugID, y=value, color=Trimming)) +
+  geom_boxplot(width=.5, outlier.shape= NA, position = position_dodge(width = 0.5), alpha = 0.7) +
+  geom_point(pch = 21) +
+  xlab("Plug ID") +  
+  ylab("Value") + #Axis titles
+  theme_classic() + 
+  theme(panel.border = element_rect(color="black", fill=NA, size=0.75), 
+        panel.grid.major = element_blank(), #Makes background theme white
+        panel.grid.minor = element_blank(), 
+        axis.line = element_blank()) +
+  facet_wrap(~ measurement, scales = "free_y")
+
+# EXT date x trimming
+data %>% select(1:23) %>%
+  gather(measurement, value, 8:23) %>%
+  ggplot(., aes(x=EXT_Date, y=value, color=Trimming)) +
+  geom_boxplot(width=.5, outlier.shape= NA, position = position_dodge(width = 0.5), alpha = 0.7) +
+  geom_point(pch = 21) +
+  xlab("Extraction Date") +  
+  ylab("Value") + #Axis titles
+  theme_classic() + 
+  theme(panel.border = element_rect(color="black", fill=NA, size=0.75), 
+        panel.grid.major = element_blank(), #Makes background theme white
+        panel.grid.minor = element_blank(), 
+        axis.line = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_wrap(~ measurement, scales = "free_y")
+
+# PMS date x trimming
+data %>% select(1:23) %>%
+  gather(measurement, value, 8:23) %>%
+  ggplot(., aes(x=PMS_Date, y=value, color=Trimming)) +
+  geom_boxplot(width=.5, outlier.shape= NA, position = position_dodge(width = 0.5), alpha = 0.7) +
+  geom_point(pch = 21) +
+  xlab("Pico Methyl Kit Date") +  
+  ylab("Value") + #Axis titles
+  theme_classic() + 
+  theme(panel.border = element_rect(color="black", fill=NA, size=0.75), 
+        panel.grid.major = element_blank(), #Makes background theme white
+        panel.grid.minor = element_blank(), 
+        axis.line = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_wrap(~ measurement, scales = "free_y")
+```
+
+```{r}
+# for each plug ID x Trimming
+data %>% select(1:10, 24:33) %>%
+  gather(measurement, value, 11:20) %>%
+  ggplot(., aes(x=PlugID, y=value, color=Trimming)) +
+  geom_boxplot(width=.5, outlier.shape= NA, position = position_dodge(width = 0.5), alpha = 0.7) +
+  geom_point(pch = 21) +
+  xlab("Plug ID") +  
+  ylab("Value") + #Axis titles
+  theme_classic() + 
+  theme(panel.border = element_rect(color="black", fill=NA, size=0.75), 
+        panel.grid.major = element_blank(), #Makes background theme white
+        panel.grid.minor = element_blank(), 
+        axis.line = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_wrap(~ measurement, scales = "free")
+
+# EXT date x trimming
+data %>% select(1:10, 24:33) %>%
+  gather(measurement, value, 11:20) %>%
+  ggplot(., aes(x=EXT_Date, y=value, color=Trimming)) +
+  geom_boxplot(width=.5, outlier.shape= NA, position = position_dodge(width = 0.5), alpha = 0.7) +
+  geom_point(pch = 21) +
+  xlab("Extraction Date") +  
+  ylab("Value") + #Axis titles
+  theme_classic() + 
+  theme(panel.border = element_rect(color="black", fill=NA, size=0.75), 
+        panel.grid.major = element_blank(), #Makes background theme white
+        panel.grid.minor = element_blank(), 
+        axis.line = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_wrap(~ measurement, scales = "free_y")
+
+# PMS date x trimming
+data %>% select(1:10, 24:33) %>%
+  gather(measurement, value, 11:20) %>%
+    ggplot(., aes(x=PMS_Date, y=value, color=Trimming)) +
+  geom_boxplot(width=.5, outlier.shape= NA, position = position_dodge(width = 0.5), alpha = 0.7) +
+  geom_point(pch = 21) +
+  xlab("Pico Methyl Kit Date") +  
+  ylab("Value") + #Axis titles
+  theme_classic() + 
+  theme(panel.border = element_rect(color="black", fill=NA, size=0.75), 
+        panel.grid.major = element_blank(), #Makes background theme white
+        panel.grid.minor = element_blank(), 
+        axis.line = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_wrap(~ measurement, scales = "free_y")
+```
+
