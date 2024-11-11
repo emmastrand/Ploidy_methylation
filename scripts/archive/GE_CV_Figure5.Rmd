@@ -1,0 +1,120 @@
+---
+title: "GE_Figure5"
+author: "Emma Strand"
+date: "2024-03-06"
+output: html_document
+---
+
+# GE of DMG for manuscript
+
+## load libraries 
+
+```{r}
+library(ggplot2)
+library(ggsignif)
+library(ggpubr)
+library(cowplot)
+```
+
+Running Targeted-GE script 
+
+A) CpG % methylation vs. GE CV-1 
+
+```{r}
+fig5_meth_CV <-
+  GE.meth.summary2 %>%
+  ggplot(., aes(x=per.meth, y=inv_CV, color=meth_exp_group)) + 
+  theme_bw() +
+  geom_point(alpha=0.2, size=0.7) + 
+  ylab(expression("Gene expression" ~CV^-1)) +
+  xlab("CpG methylation level (%)") + 
+  labs(color="Group") +
+  stat_poly_line(linewidth=1.5) +
+  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+  stat_poly_eq() +
+  ggtitle("group x methylation p = 0.0075") +
+  guides(color=guide_legend(override.aes = list(fill=NA))) +
+  theme(strip.text.x = element_text(size = 12, color = "black", face = "bold"),
+        strip.text.y = element_text(size = 12, color = "black", face = "bold"),
+        strip.background = element_rect(color="black", fill="white", size=0.5, linetype="solid"),
+        legend.box.background = element_blank(),
+        legend.background = element_blank(),
+        legend.key = element_rect(color = "transparent"),
+        legend.position = "none",
+        axis.title.y = element_text(margin = margin(t=0, r=10, b=0, l=0), size=14), #bold in ylab exp
+        axis.title.x = element_text(margin = margin(t=10, r=0, b=0, l=0), size=14),
+        legend.text = element_text(size=12, color = "black"),
+        plot.title = element_text(size = 10, color="grey40", face="italic", hjust=1),
+        legend.title = element_text(size=13, color = "black"));fig5_meth_CV
+```
+
+B) CpG % methylation vs. log exp
+
+```{r}
+fig5_meth_log <-
+  GE.meth.summary2 %>%
+  ggplot(., aes(x=per.meth, y=log_expression, color=meth_exp_group)) + 
+  theme_bw() +
+  geom_point(alpha=0.2, size=0.7) + 
+  ylab(expression("Gene expression" ~(log[10] ~+1))) +
+  xlab("CpG methylation level (%)") + 
+  labs(color="Group") +
+  stat_poly_line(linewidth=1.5) +
+  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+  stat_poly_eq() +
+  ggtitle("methylation p < 0.0001") +
+  guides(color=guide_legend(override.aes = list(fill=NA))) +
+  theme(strip.text.x = element_text(size = 12, color = "black", face = "bold"),
+        strip.text.y = element_text(size = 12, color = "black", face = "bold"),
+        strip.background = element_rect(color="black", fill="white", size=0.5, linetype="solid"),
+        legend.box.background = element_blank(),
+        legend.background = element_blank(),
+        legend.key = element_rect(color = "transparent"),
+        legend.position = "none",
+        axis.title.y = element_text(margin = margin(t=0, r=10, b=0, l=0), size=14), #bold in ylab exp
+        axis.title.x = element_text(margin = margin(t=10, r=0, b=0, l=0), size=14),
+        plot.title = element_text(size = 10, color="grey40", face="italic", hjust=1),
+        legend.text = element_text(size=12, color = "black"),
+        legend.title = element_text(size=13, color = "black"));fig5_meth_log
+```
+
+C) Log exp vs. CV-1
+
+```{r}
+fig5_CV_log <-
+  GE.meth.summary2 %>%
+  ggplot(., aes(x=log_expression, y=inv_CV, color=meth_exp_group)) + 
+  theme_bw() +
+  geom_point(alpha=0.2, size=0.7) + 
+  xlab(expression("Gene expression" ~(log[10] ~+1))) +
+  ylab(expression("Gene expression" ~CV^-1)) + 
+  labs(color="Group") +
+  stat_poly_line(linewidth=1.5) +
+  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+  stat_poly_eq() +
+  ggtitle("group x expression p < 0.0001") +
+  guides(color=guide_legend(override.aes = list(fill=NA))) +
+  theme(strip.text.x = element_text(size = 12, color = "black", face = "bold"),
+        strip.text.y = element_text(size = 12, color = "black", face = "bold"),
+        strip.background = element_rect(color="black", fill="white", size=0.5, linetype="solid"),
+        legend.box.background = element_blank(),
+        legend.background = element_blank(),
+        legend.key = element_rect(color = "transparent"),
+        legend.position = c(0.87,0.82),
+        plot.title = element_text(size = 10, color="grey40", face="italic", hjust=1),
+        axis.title.y = element_text(margin = margin(t=0, r=10, b=0, l=0), size=14), #bold in ylab exp
+        axis.title.x = element_text(margin = margin(t=10, r=0, b=0, l=0), size=14),
+        legend.text = element_text(size=12, color = "black"),
+        legend.title = element_text(size=13, color = "black"));fig5_CV_log
+```
+
+```{r}
+fig5 <- plot_grid(fig5_meth_CV, fig5_meth_log, fig5_CV_log,
+          labels=c("A)", "B)", "C)"), 
+          nrow=1, align="h", axis="l",
+          label_size = 18); fig5
+
+ggsave("data/WGBS/output/figures/Fig5.jpeg", fig5, width = 14, height = 4.25)
+```
+
+

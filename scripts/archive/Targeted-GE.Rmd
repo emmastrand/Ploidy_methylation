@@ -1,0 +1,870 @@
+---
+title: "Targeted Gene Expression"
+author: "EL Strand"
+output:
+  github_document: default
+  pdf_document:
+    keep_tex: yes
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Targeted Gene Expression 
+
+## Run the below steps in Andromeda prior to running this R script:
+
+Based on Erin Magliano's https://github.com/erinmags/Bioinformatics-Project/blob/main/M.cap_Bioinformatics_R_Markdown.Rmd and Erin Chille's https://github.com/echille/Mcapitata_Developmental_Gene_Expression_Timeseries/blob/master/2b-Epi-MZT-Enzyme-Expression/Epi_MZT_biomarker_expression.Rmd. 
+
+### Make blast database from Mcap and Pacuta predicted protein fasta file and compared to cnidarian epigenetic biomarkers
+
+The counts matrix I'll use for now is the v2 version from Mcapitata so the protein reference needs to be older to match names. I'll update this later. 
+
+```{bash}
+wget https://osf.io/download/kxmvt/ ## Mcap from OSF folder name = Mcap.protein.fa
+wget http://cyanophora.rutgers.edu/Pocillopora_acuta/Pocillopora_acuta_HIv2.genes.pep.faa.gz
+
+## content from https://github.com/echille/Mcapitata_Developmental_Gene_Expression_Timeseries/blob/master/2b-Epi-MZT-Enzyme-Expression/Input/Epi_MTZ_biomarkers.fa 
+nano Epi_biomarkers.fa ## paste the info from Erin's script 
+```
+
+`epi_blast.sh`: 
+
+```{bash}
+#!/bin/bash
+#SBATCH --job-name="blastdb"
+#SBATCH -t 500:00:00
+#SBATCH --nodes=1 --ntasks-per-node=10
+#SBATCH --mem=128GB
+#SBATCH --export=NONE
+#SBATCH -D /data/putnamlab/estrand/HoloInt_RNAseq/
+#SBATCH --cpus-per-task=3
+#SBATCH --error="messages/%x_error.%j" #if your job fails, the error report will be put in this file
+#SBATCH --output="messages/%x_output.%j" #once your job is completed, any final job report comments will be put in this file
+
+# load modules needed (specific need for my computer)
+source /usr/share/Modules/init/sh # load the module function
+module load BLAST+/2.12.0-gompi-2021b #latest on andromeda 
+ 
+## MCAP 
+makeblastdb -in Mcap.protein.fa -input_type fasta -dbtype prot -parse_seqids -out Mcap.protein.blast.db
+
+blastp -query Epi_biomarkers.fa -db Mcap.protein.blast.db -outfmt 6 -max_target_seqs 100 -evalue 1e-05 -out Mcap_Epi_biomarker_hits_100.tsv
+
+##PACUTA 
+makeblastdb -in Pocillopora_acuta_HIv2.genes.pep.faa -input_type fasta -dbtype prot -parse_seqids -out Pacuta.protein.blast.db
+
+blastp -query Epi_biomarkers.fa -db Pacuta.protein.blast.db -outfmt 6 -max_target_seqs 100 -evalue 1e-05 -out Pacuta_Epi_biomarker_hits_100.tsv
+```
+
+`epi_blast2.sh`: same as above but with older Pacuta version
+
+```{bash}
+makeblastdb -in Pocillopora_acuta_HIv1.genes.pep.faa -input_type fasta -dbtype prot -parse_seqids -out Pacuta.protein.blastv1.db
+blastp -query Epi_biomarkers.fa -db Pacuta.protein.blastv1.db -outfmt 6 -max_target_seqs 100 -evalue 1e-05 -out Pacuta_Epi_biomarker_hits_100_v1.tsv
+blastp -query ref/combinedref.fasta -db Pacuta.protein.blastv1.db -outfmt 6 -max_target_seqs 100 -evalue 1e-05 -out Pacuta_Epi_biomarker_hits_100_ES_v1.tsv
+```
+
+
+### copy out tsv files to R (not in andromeda - in normal terminal)
+
+```{Bash}
+scp emma_strand@ssh3.hac.uri.edu:/data/putnamlab/estrand/HoloInt_RNAseq/Mcap_Epi_biomarker_hits_100.tsv /Users/emmastrand/MyProjects/Acclim_Dynamics_molecular/data/Epigenetic_machinery/
+
+scp emma_strand@ssh3.hac.uri.edu:/data/putnamlab/estrand/HoloInt_RNAseq/Pacuta_Epi_biomarker_hits_100.tsv /Users/emmastrand/MyProjects/Acclim_Dynamics_molecular/data/Epigenetic_machinery/
+
+scp emma_strand@ssh3.hac.uri.edu:/data/putnamlab/estrand/HoloInt_RNAseq/Pacuta_Epi_biomarker_hits_100_ES_v1.tsv /Users/emmastrand/MyProjects/Acclim_Dynamics_molecular/data/Epigenetic_machinery/
+scp emma_strand@ssh3.hac.uri.edu:/data/putnamlab/estrand/HoloInt_RNAseq/Pacuta_Epi_biomarker_hits_100_v1.tsv /Users/emmastrand/MyProjects/Acclim_Dynamics_molecular/data/Epigenetic_machinery/
+```
+
+## Load libraries 
+
+```{r}
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library("RColorBrewer")
+library("tidyverse")
+library("ggpubr")
+library("DESeq2")
+library("genefilter")
+library(Rmisc)
+library(lme4)
+library(car)
+library(purrr)
+library(lubridate)
+library(Hmisc)
+library(naniar)
+library(stats)
+library(forcats)
+library(data.table)
+library(writexl)
+```
+
+## Read in RNASeq data 
+
+```{r}
+## Using old genome version -- this needs to be updated 
+# Mcap <- read.delim("data/Epigenetic_machinery/Mcap.mRNA.fa.salmon.allSamples.numreads.matrix") %>%
+#   dplyr::rename(gene_id = Name) %>% gather(., "Plug_ID", "count", 2:133) %>%
+#   mutate(Plug_ID = str_remove(Plug_ID, ".*_")) 
+# 
+# Mcap_samplelist <- Mcap %>% dplyr::select(Plug_ID) %>% distinct()
+# 
+# Mcap <- Mcap %>% spread(., Plug_ID, count)
+
+## Using old genome version -- this needs to be updated 
+Pacuta <- read.delim("data/Epigenetic_machinery/Pocillopora_acuta_KBHIv2.gentrome.fa.gz.salmon.numreads.matrix") %>%
+  dplyr::rename(gene_id = Name) %>% gather(., "Plug_ID", "count", 2:120) %>%
+  mutate(Plug_ID = str_remove(Plug_ID, ".*_")) 
+
+Pacuta_methgroups <- read.csv("data/WGBS/output/meth_pattern_groups.csv") %>% 
+  dplyr::select(-X) %>% dplyr::rename(Plug_ID = Sample.ID)
+Pacuta_methgroups$Plug_ID <- as.character(Pacuta_methgroups$Plug_ID)
+
+Pacuta_samplelist <- Pacuta_methgroups %>% dplyr::select(Plug_ID) %>% distinct() 
+
+Pacuta <- Pacuta %>% filter(Plug_ID %in% Pacuta_samplelist$Plug_ID) %>%
+  spread(., Plug_ID, count) %>%
+  mutate(gene_id = str_replace_all(gene_id, "KB", ""))
+```
+
+## Read in blastdb output 
+
+Proteins chosen from Uniprot under cnidarian family. 
+
+```{r}
+txt_output <-   
+  list.files(path = 'data/Epigenetic_machinery/ref/txt_files',pattern = ".txt", full.names = TRUE) %>% 
+  # list files in directory following a particular pattern
+  set_names(.) %>% # get the column names
+  map_dfr(read.delim2, .id = "protein.name", header=FALSE) %>% # join all files together in one data frame by file ID
+  group_by(protein.name) %>% dplyr::rename("queryprot" = "V1") %>%
+  mutate(protein.name = str_replace_all(protein.name ,"data/Epigenetic_machinery/ref/txt_files/", ""),
+         protein.name = str_replace_all(protein.name ,"-list.txt", ""),
+         queryprot = sub("\\s.*", "", queryprot),
+         queryprot = sub(">", "", queryprot)) #get rid of everything after the space 
+
+blast_output <-
+  list.files(path = 'data/Epigenetic_machinery/output',pattern = ".tsv", full.names = TRUE) %>% 
+  # list files in directory following a particular pattern
+  set_names(.) %>% # get the column names
+  map_dfr(read.delim2, .id = "source", header=FALSE) %>% # join all files together in one data frame by file ID
+  group_by(source) %>% dplyr::rename("queryprot" = "V1", "gene_id" = "V2", 
+                              "pident" = "V3", "length" = "V4",
+                              "mismatch" = "V5", "gapopen" = "V6",
+                              "qstart" = "V7", "qend" = "V8",
+                              "sstart" = "V9", "send" = "V10",
+                              "evalue" = "V11", "bitscore" = "V12") %>%
+  left_join(., txt_output, by = "queryprot") %>%
+  mutate(Epi.gene = case_when(
+                    queryprot == "PFX23237.1" ~ "DNMT3A",
+                    queryprot == "XP_029197815.1" ~ "DNMT1",
+                    queryprot == "XP_022807504.1" ~ "TET1",
+                    queryprot == "XP_020905893.1" ~ "MBD3",
+                    queryprot == "XP_032230201.1" ~ "MBD2",
+                    queryprot == "XP_001623403.2" ~ "UHRF1")) %>%
+  mutate(protein.name = coalesce(protein.name,Epi.gene)) %>%
+  filter(!is.na(protein.name)) #filtering out the proteins from Erin's that we don't want 
+
+# mcapblast <- blast_output %>% filter(grepl('Mcap', source)) 
+pacutablast <- blast_output %>% filter(grepl('Pacuta', source))  
+
+pacutablast %>% write.csv("data/Epigenetic_machinery/pacuta_blastdf.csv", quote = FALSE)
+```
+
+## Read in metadata
+
+Problem in extraction process: 4 samples for 12 hour and 2 samples for 0 hour for Mcap HTAC. They are correctly labeled and those sample sizes are correct. A fragment that melted in the 0 hour timepoint. 
+
+```{r}
+meta <- read.csv("data/Molecular_metadata.csv") %>%
+  mutate(Timepoint = if_else(Plug_ID == "2153", "12 hour", Timepoint)) %>%
+  filter(!Plug_ID=="1236") %>% filter(!Plug_ID=="1177") %>%
+  dplyr::select(Plug_ID, Species, Tank, Treatment, Temperature, CO2, Timepoint, Sample.Date) 
+  
+meta$Plug_ID <- as.character(meta$Plug_ID)
+
+meta$Timepoint <- factor(meta$Timepoint, 
+                           levels = c("0 hour", "6 hour", "12 hour", "30 hour",
+                                      "1 week", "2 week", "4 week", "6 week",
+                                      "8 week", "12 week", "16 week"))
+
+# Mcap_meta <- meta %>% subset(Species == "Mcapitata") %>% arrange(., Plug_ID)
+Pacuta_meta <- meta %>% subset(Species == "Pacuta") %>% arrange(., Plug_ID) %>%
+  right_join(., Pacuta_methgroups, by = "Plug_ID")
+```
+
+## Transform count matrix with meta 
+
+```{r}
+# Pacuta_samplelist <- left_join(Pacuta_samplelist, meta, by = "Plug_ID") ##119 samples total 
+Pacuta_samplesize <- Pacuta_meta %>%
+  dplyr::group_by(meth_exp_group) %>%
+  summarise(., n = n()) ## all have 3 but 2 so use 2 as minimum sample at the bottom (treatment)
+
+# Mcap_samplelist <- left_join(Mcap_samplelist, meta, by = "Plug_ID") ##132 samples total 
+# Mcap_samplesize <- Mcap_samplelist %>%
+#   dplyr::group_by(Treatment, Timepoint) %>%
+#   summarise(., n = n()) ## all have 3 and includes 16 week where Pacuta doesn't 
+# 
+# Mcap_samplelist %>% subset(Species == "Mcapitata") %>% subset(Timepoint == "0 hour" & Treatment == "HTAC")
+# Mcap_samplelist %>% subset(Species == "Mcapitata") %>% subset(Timepoint == "12 hour" & Treatment == "HTAC")
+```
+
+
+## Data filtering: PoverA and genefilter
+
+Conduct data filtering, this includes:  
+
+*pOverA*: Specifying the minimum count for a proportion of samples for each gene. Filter in the package "genefilter". Pre-filtering our dataset to reduce the memory size dataframe, increase the speed of the transformation and testing functions, and improve quality of statistical analysis by removing low-coverage counts. Removed counts could represent outliers in the data and removing these improves sensitivity of statistical tests. 
+
+### Pacuta 
+
+**Treatment, Timepoint**: Here, we are using a pOverA of 0.017. This is because we have 119 samples with a minimum of n=2 samples per group. Therefore, we will accept genes that are present in 2/119 = 0.017 of the samples because we expect different expression by environmental effect. We are further setting the minimum percentage of genes to 1, such that 1.7% of the samples must have a counts minimum of 10.  
+
+**Methylation pattern group**: Here, we are using a pOverA of 0.294. This is because we have 51 samples with a minimum of n=15 samples per group. Therefore, we will accept genes that are present in 15/51 = 0.294 of the samples because we expect different expression by ploidy. We are further setting the minimum percentage of genes to 1, such that 29.4% of the samples must have a counts minimum of 10.  
+
+### Mcap 
+
+*Because of the sample size of 4 and 2 above, this is also 2. 
+
+Here, we are using a pOverA of 0.015 This is because we have 132 samples with a minimum of n=3 samples per group. Therefore, we will accept genes that are present in 2/132 = 0.015 of the samples because we expect different expression by life stage. We are further setting the minimum percentage of genes to 1, such that 1.5% of the samples must have a counts minimum of 10.  
+ 
+``` {r, echo=TRUE, warning=FALSE, message=FALSE}
+# Mcap_matrix <- Mcap %>% column_to_rownames(., var = "gene_id")
+Pacuta_matrix <- Pacuta %>% column_to_rownames(., var = "gene_id")
+
+#Mfilt <- filterfun(pOverA(0.015,10)) #consider changing
+#Pfilt <- filterfun(pOverA(0.017,10)) #environmental 
+Pfilt <- filterfun(pOverA(0.294,10))
+
+#create filter for the counts data
+#Mgfilt <- genefilter(Mcap_matrix, Mfilt)
+Pgfilt <- genefilter(Pacuta_matrix, Pfilt)
+
+#identify genes to keep by count filter
+#Mkeep <- Mcap_matrix[Mgfilt,]
+Pkeep <- Pacuta_matrix[Pgfilt,]
+
+#identify gene lists
+#Mn.keep <- rownames(Mkeep)
+Pn.keep <- rownames(Pkeep)
+
+#gene count data filtered in PoverA, P percent of the samples have counts over A
+#Mcap_data_filt <- as.data.frame(Mcap_matrix[which(rownames(Mcap_matrix) %in% Mn.keep),])
+Pacuta_data_filt <- as.data.frame(Pacuta_matrix[which(rownames(Pacuta_matrix) %in% Pn.keep),])
+
+#How many rows do we have before and after filtering?
+# nrow(Mcap_matrix) #Before = 62,038
+# nrow(Mcap_data_filt) #After = 31,245
+#Filtering removed 30,793 genes
+
+#How many rows do we have before and after filtering?
+nrow(Pacuta_matrix) #Before = 33,259
+nrow(Pacuta_data_filt) #After = 22,531 for environmental; = 19,128 for ploidy 
+#Filtering removed 10,728 genes in environmental; 14,131 in ploidy analysis 
+```
+
+In order for the DESeq2 algorithms to work, the SampleIDs on the treatmentinfo file and count matrices have to match exactly and in the same order. The following R clump will check to make sure that these match.
+
+```{r}
+#Checking that all row and column names match. Should return "TRUE"
+# all(Mcap_meta$Plug_ID %in% colnames(Mcap_data_filt))
+# all(Mcap_meta$Plug_ID == colnames(Mcap_data_filt)) 
+
+all(Pacuta_meta$Plug_ID %in% colnames(Pacuta_data_filt))
+all(Pacuta_meta$Plug_ID == colnames(Pacuta_data_filt)) 
+```
+
+## Read normalization
+We are now going normalize our read counts using VST-normalization in DESeq2
+
+### Construct the DESeq2 dataset
+
+Create a DESeqDataSet design from gene count matrix and labels. Here we set the design to look at time_point to test for any differences in gene expression across timepoints.
+
+```{r}
+# Mcap_meta$Timepoint <- as.character(Mcap_meta$Timepoint)
+#Pacuta_meta$Timepoint <- as.character(Pacuta_meta$Timepoint)
+
+#Set DESeq2 design
+## round() b/c this can't have decimals so just rounding to nearest integer 
+# Mcap_gdds_dev <- DESeqDataSetFromMatrix(countData = round(Mcap_data_filt),
+#                               colData = Mcap_meta,
+#                               design = ~Timepoint*Temperature*CO2)
+
+Pacuta_gdds_dev <- DESeqDataSetFromMatrix(countData = round(Pacuta_data_filt),
+                              colData = Pacuta_meta,
+                              #design = ~Timepoint*Temperature*CO2)
+                              design = ~meth_exp_group)
+
+## combine DESeq matrix so can directly compare and normalize them together 
+# mcap_forall <- Mcap_data_filt %>% 
+#   rownames_to_column(., var="gene_id") %>%
+#   gather(., "Plug_ID", "count", 2:133)
+pacuta_forall <- Pacuta_data_filt %>% 
+  rownames_to_column(., var="gene_id") %>%
+  gather(., "Plug_ID", "count", 2:52) #120 for all pacuta 
+
+all_data_filt <- pacuta_forall %>% #bind_rows(mcap_forall, pacuta_forall) %>% 
+  spread(., Plug_ID, count) %>%
+  column_to_rownames(., var="gene_id")
+## stopped at making the DESeq matrix b/c the meta frames are different... come back to this 
+```
+
+#### Log-transform the count data
+First we are going to log-transform the data using a variance stabilizing transforamtion (VST). This is only for visualization purposes. Essentially, this is roughly similar to putting the data on the log2 scale. It will deal with the sampling variability of low counts by calculating within-group variability (if blind=FALSE). Importantly, it does not use the design to remove variation in the data, and so can be used to examine if there may be any variability do to technical factors such as extraction batch effects.
+
+To do this we first need to calculate the size factors of our samples. This is a rough estimate of how many reads each sample contains compared to the others. In order to use VST (the faster log2 transforming process) to log-transform our data, the size factors need to be less than 4. Otherwise, there could be artefacts in our results.
+
+```{r}
+# Mcap_SF.gdds_dev <- estimateSizeFactors(Mcap_gdds_dev) #estimate size factors to determine if we can use vst  to transform our data. Size factors should be less than for to use vst
+# print(sizeFactors(Mcap_SF.gdds_dev)) #View size factors
+
+Pacuta_SF.gdds_dev <- estimateSizeFactors(Pacuta_gdds_dev) #estimate size factors to determine if we can use vst  to transform our data. Size factors should be less than four to use vst
+print(sizeFactors(Pacuta_SF.gdds_dev)) #View size factors
+
+```
+
+Our size factors are all less than 4, so we can use VST!
+```{r}
+# Mcap_gvst_dev <- vst(Mcap_gdds_dev, blind=FALSE) #apply a variance stabilizing transforamtion to minimize effects of small counts and normalize wrt library size
+# head(assay(Mcap_gvst_dev), 3) #view transformed gene count data
+
+Pacuta_gvst_dev <- vst(Pacuta_gdds_dev, blind=FALSE) #apply a variance stabilizing transforamtion to minimize effects of small counts and normalize wrt library size
+head(assay(Pacuta_gvst_dev), 3) #view transformed gene count data
+```
+
+
+### create df from matrix above 
+
+```{r}
+# mcap_counts <- as.data.frame(assay(Mcap_gvst_dev)) 
+# mcap_counts_epi <- mcap_counts[(row.names(mcap_counts) %in% mcapblast$gene_id), ] %>% 
+#   rownames_to_column(., var = "gene_id")
+
+pacuta_counts <- as.data.frame(assay(Pacuta_gvst_dev)) 
+pacuta_counts_epi <- pacuta_counts[(row.names(pacuta_counts) %in% pacutablast$gene_id), ] %>% 
+  rownames_to_column(., var = "gene_id") 
+```
+
+## GO TERMS FROM ERIN'S MATRIX 
+
+```{r}
+erin_DEG <- read.csv(file="data/RNASeq/3-Pacu-group-DEG-GOenrichment-results.csv") 
+erin_DEG %>%
+  filter(., grepl("methyltransferase", term))
+```
+
+```{r}
+## gene matrix for epimachinery analyses 
+pacuta_counts_eggNOGG <- pacuta_counts %>% rownames_to_column(., var = "gene")
+
+### erasers and writers
+acetylase <- eggNOGG %>% filter(., grepl("acetylase", Description)) %>%
+  mutate(gene_group = "acetylase") ## 23 genes
+TET <- eggNOGG %>% filter(., grepl("TET", Preferred_name)) %>%
+  mutate(gene_group = "TET") ## 1 gene
+methylase <- eggNOGG %>% filter(., grepl("methylase", Description)) %>% mutate(gene_group = "methylase") ## 12 genes
+methyltransferase <- eggNOGG %>% filter(., grepl("methyltransferase", Description)) %>% 
+  mutate(gene_group = "methyltransferase") ## 126 genes
+
+### readers
+PHD <- eggNOGG %>% filter(., grepl("PHD", Description)) %>% mutate(gene_group = "PHD") ## 7 genes
+WD40 <- eggNOGG %>% filter(., grepl("WD40", Description)) %>% mutate(gene_group = "WD40") ## 14 genes
+MBD <- eggNOGG %>% filter(., grepl("MBD", Preferred_name)) %>% mutate(gene_group = "MBD") ## 2 genes 
+UHRF <- eggNOGG %>% filter(., grepl("UHRF", Preferred_name)) %>% mutate(gene_group = "UHRF") ## 2 genes 
+
+## 187 genes and length of all_epi_genes should be 187 
+all_epi_genes <- rbind(acetylase, TET, methylase, methyltransferase, PHD, WD40, MBD, UHRF)
+length(unique(all_epi_genes$gene))
+
+## all epigenes
+all_epi_genes <- all_epi_genes %>% dplyr::select(gene, Description, Preferred_name, gene_group) %>%
+  left_join(., pacuta_counts_eggNOGG, by = "gene") %>% filter(!is.na(`1047`)) %>%
+  gather(., "Plug_ID", "count", 5:55) %>%
+  left_join(., Pacuta_meta, by = "Plug_ID") %>%
+  filter(!is.na(count))
+
+## 187 genes in genome and 170 in the gene expression data matrix
+length(unique(all_epi_genes$gene))
+
+### running ANOVA loop
+epigene_results <- data.frame()
+
+for (i in all_epi_genes$gene){
+  stats_subset <- all_epi_genes %>% subset(gene==i)
+  aov <- aov(count ~ meth_exp_group, data=stats_subset) 
+  ANOVA <- Anova(aov, type = "III")
+  TUKEY <- TukeyHSD(aov)
+  
+  pvalue <- as.data.table(ANOVA)[2,4]
+  pvalue <- pvalue %>% dplyr::rename(pvalue = `Pr(>F)`)
+  
+  Tukeydf <- as.data.frame(TUKEY$meth_exp_group[,4]) %>% rownames_to_column(., "comparison") %>%
+              dplyr::rename(pvalue = `TUKEY$meth_exp_group[, 4]`) %>% spread(comparison, pvalue)
+  
+  DF <- data.frame(stats_subset[1,1], pvalue, Tukeydf) %>% dplyr::rename(gene = `stats_subset.1..1.`)
+  
+  epigene_results <- rbind(epigene_results, DF)
+  }
+
+epigene_results <- epigene_results %>% distinct() %>%
+  mutate_if(is.numeric, round, 8) %>% 
+  mutate(sig = ifelse(pvalue < 0.050, "significant", "NS"))
+## 74 genes out of 170 has significantly diff exp
+```
+
+Plotting
+
+```{r}
+### list of gene groups
+gene_groups <- all_epi_genes %>% dplyr::select(gene, gene_group) %>% distinct()
+gene_function <- all_epi_genes %>% dplyr::select(gene, Description, Preferred_name) %>% distinct()
+
+### calculating means 
+mean_exp_group <- summarySE(data = all_epi_genes, measurevar = "count", 
+                            groupvars = c("gene", "meth_exp_group")) %>%
+  left_join(., epigene_results)
+
+
+total_mean <- all_epi_genes %>% dplyr::select(gene, count, Plug_ID) %>%
+  group_by(gene) %>%
+  mutate(mean = mean(count)) %>% dplyr::select(-Plug_ID, -count) %>% distinct() %>% ungroup()
+
+mean_exp_epigroup <- mean_exp_group %>% filter(pvalue < 0.050) %>% left_join(., gene_groups, by = "gene") %>%
+  dplyr::select(-sd, -ci, -N) %>% #
+  left_join(., total_mean, by = "gene") %>%
+  mutate(diff = count-mean) 
+
+mean_exp_epigroup %>% left_join(., gene_function, by = "gene") %>%
+  write_xlsx("data/RNASeq/Ploidy_epigenes_exp.xlsx")
+
+mean_exp_epigroup_annotated <- readxl::read_excel("data/RNASeq/Ploidy_epigenes_exp_edited.xlsx")
+
+## plotting
+mean_exp_group1 <-  mean_exp_epigroup_annotated %>% 
+  ggplot(., aes(x=count, y=reorder(gene, gene_group), color=meth_exp_group)) + 
+  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+  facet_grid(Brief_description~., switch="y", scales = "free", space = "free") + # 
+  geom_errorbar(aes(x=count, y=reorder(gene, gene_group), xmin=count-se, xmax=count+se), width=0.1) +
+  #scale_y_discrete(labels = Brief_description) +
+  geom_point() + 
+  theme_classic() + 
+  ylab("") + 
+  xlab("") +
+  theme(strip.text.y.left = element_text(angle=0, size=7, color = "grey25", face="italic", hjust=1),
+        strip.background = element_blank(),
+        axis.text.x = element_text(size=8, color = "grey25"),
+        axis.ticks.y = element_blank(),
+        axis.line.y = element_blank(),
+        axis.text.y = element_blank(),
+        panel.grid.major = element_line(color = "grey95"),
+        panel.border = element_rect(color="grey65", fill=NA, size=0.3),
+        panel.spacing = unit(0, "mm"))
+
+ggsave(filename="data/RNASeq/Gene_exp.png",
+       plot=mean_exp_group1, dpi=300, width=8, height=12, units="in")
+
+### left off at reordering y axis by gene_group or labeling by gene_group
+
+
+
+## general exp plotting
+mean_exp_epigroup %>%
+  ggplot(., aes(x=diff, y=meth_exp_group, color=meth_exp_group)) + 
+  geom_jitter(height=0.1, width=0.1) + theme_bw() +
+  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+  theme(legend.position = "none") + 
+    ylab("")
+
+mean_exp_group2 <- mean_exp_epigroup %>%
+  filter(diff > 0.0) %>%
+  ggplot(., aes(x=meth_exp_group, y=gene, size=diff)) + 
+  geom_point() + 
+  theme_bw()
+  
+ggsave(filename="data/RNASeq/Gene_exp2.png",
+       plot=mean_exp_group2, dpi=300, width=6, height=12, units="in")
+
+```
+
+
+
+
+
+
+### EPIMACHINERY FROM BLAST 
+
+### transforming df to calculate means 
+
+Filter for the top hit:
+
+Top DNMT1 gene: Montipora_capitata_PredGene_g53952 
+Top DNMT3 gene: Montipora_capitata_PredGene_g25804 (also MBD gene hit) 
+Top TET gene: Montipora_capitata_PredGene_adi2mcaRNA27872_R0 
+Top MBD gene: Montipora_capitata_PredGene_g25181
+Top UHRF gene: Montipora_capitata_PredGene_adi2mcaRNA19502_R0
+
+
+```{r}
+# mcap_counts_epi_subset <- mcap_counts_epi %>% gather("Plug_ID", "count", 2:133) %>%
+#   left_join(., meta, by = "Plug_ID") %>% 
+#   left_join(., mcapblast, by = "gene_id") %>%
+#   mutate(protein.name = str_replace_all(protein.name ,"TET1", "TET"),
+#          protein.name = str_replace_all(protein.name ,"MBD2", "MBD"),
+#          protein.name = str_replace_all(protein.name ,"MBD3", "MBD"),
+#          protein.name = str_replace_all(protein.name ,"DNMT3A", "DNMT3")) %>%
+#   subset(gene_id == "Montipora_capitata_PredGene_g53952" |
+#            gene_id == "Montipora_capitata_PredGene_g25804" |
+#            gene_id == "Montipora_capitata_PredGene_adi2mcaRNA27872_R0" |
+#            gene_id == "Montipora_capitata_PredGene_g25181" |
+#            gene_id == "Montipora_capitata_PredGene_adi2mcaRNA19502_R0") %>%
+#   select(protein.name, Plug_ID, count, gene_id, Treatment, Timepoint) %>% 
+#   distinct()
+# 
+# mcap_epi_means_subset <- summarySE(mcap_counts_epi_subset, measurevar = c("count"), 
+#                                  groupvars = c("gene_id", "Treatment", "Timepoint")) %>% 
+#   left_join(., mcapblast, by = "gene_id") %>%
+#   filter(!c(gene_id == "Montipora_capitata_PredGene_g25804" & protein.name == "MBD"))
+# 
+# mcap_counts_epi_all <- mcap_counts_epi %>% gather("Plug_ID", "count", 2:133) %>%
+#   left_join(., meta, by = "Plug_ID") %>% 
+#   left_join(., mcapblast, by = "gene_id") %>%
+#   mutate(protein.name = str_replace_all(protein.name ,"TET1", "TET"),
+#          protein.name = str_replace_all(protein.name ,"MBD2", "MBD"),
+#          protein.name = str_replace_all(protein.name ,"MBD3", "MBD"),
+#          protein.name = str_replace_all(protein.name ,"DNMT3A", "DNMT3"))%>%
+#   select(protein.name, Plug_ID, count, gene_id, Treatment, Timepoint) %>% 
+#   distinct()
+# 
+# mcap_epi_means_all <- summarySE(mcap_counts_epi_all, measurevar = c("count"), 
+#                                  groupvars = c("protein.name", "Treatment", "Timepoint"))
+```
+
+```{r}
+# antioxidant_genes <- mcap_epi_means %>%
+#   subset(protein.name == "catalase" | protein.name == "GPx" | protein.name == "SOD") %>%
+#   ggplot(aes(x=Timepoint, y=count, group=Timepoint, colour=Treatment)) +
+#   geom_point() + #geom_line() +
+#   ylab("") +
+#   facet_wrap(~protein.name, scales = "free_y") +
+#   geom_errorbar(aes(ymin=count-se, ymax=count+se), linewidth=0.5, width=.075) +
+#   scale_colour_manual(values = c("blue", "lightblue", "salmon", "red3")) + #set line color
+#   geom_vline(xintercept = 9.3, linetype="dashed", color = "grey")+
+#   theme_bw() + 
+#   theme(axis.text.x=element_text(angle = 45, vjust = 1, hjust=1, size = 12), #set x-axis label size
+#         axis.title.x=element_text(size = 14), #set x-axis title size
+#         axis.ticks.x=element_blank(), #No x-label ticks
+#         #axis.title.y=element_blank(), #No y-axis title
+#         axis.text.y=element_text(size = 14), #set y-axis label size, 
+#         panel.border = element_rect(color = "black", fill = NA, size = 1), #set border
+#         panel.grid.major = element_blank(), #Set major gridlines
+#         panel.grid.minor = element_blank(), #Set minor gridlines
+#         axis.line = element_line(colour = "black"), #Set axes color
+#         plot.background=element_blank(),
+#         strip.text.x = element_text(size = 16, face = "bold.italic"),
+#         plot.title = element_text(size=22))
+# 
+# ggsave(filename="data/RNASeq/antioxidant_geneexp_mcap_all.jpeg", 
+#        plot=antioxidant_genes, dpi=300, width=14, height=7, units="in")
+```
+
+
+```{r}
+# meth_genes_sub <- mcap_epi_means_subset %>%
+#   subset(protein.name == "DNMT1" | protein.name == "DNMT3" | protein.name == "TET" |
+#          protein.name == "MBD" | protein.name == "UHRF1") %>%
+#   ggplot(aes(x=Timepoint, y=count, colour=Treatment, group=Treatment)) +
+#   geom_point() + geom_line() +
+#   ylab("") +
+#   facet_wrap(~protein.name, scales = "free_y") +
+#   geom_errorbar(aes(ymin=count-se, ymax=count+se), linewidth=0.5, width=.075) +
+#   scale_colour_manual(values = c("blue", "lightblue", "salmon", "red3")) + #set line color
+#   geom_vline(xintercept = 9.3, linetype="dashed", color = "grey")+
+#   theme_bw() + 
+#   theme(axis.text.x=element_text(angle = 45, vjust = 1, hjust=1, size = 12), #set x-axis label size
+#         axis.title.x=element_text(size = 14), #set x-axis title size
+#         axis.ticks.x=element_blank(), #No x-label ticks
+#         #axis.title.y=element_blank(), #No y-axis title
+#         axis.text.y=element_text(size = 14), #set y-axis label size, 
+#         panel.border = element_rect(color = "black", fill = NA, size = 1), #set border
+#         panel.grid.major = element_blank(), #Set major gridlines
+#         panel.grid.minor = element_blank(), #Set minor gridlines
+#         axis.line = element_line(colour = "black"), #Set axes color
+#         plot.background=element_blank(),
+#         strip.text.x = element_text(size = 16, face = "bold.italic"),
+#         plot.title = element_text(size=22))
+# 
+# ggsave(filename="data/RNASeq/methylation_geneexp_Mcap_tophit.jpeg", 
+#        plot=meth_genes_sub, dpi=300, width=14, height=10, units="in")
+# 
+# meth_genes_all <- mcap_epi_means_all %>%
+#   subset(protein.name == "DNMT1" | protein.name == "DNMT3" | protein.name == "TET" |
+#          protein.name == "MBD" | protein.name == "UHRF1") %>%
+#   ggplot(aes(x=Timepoint, y=count, colour=Treatment, group=Treatment)) +
+#   geom_point() + geom_line() +
+#   ylab("") +
+#   facet_wrap(~protein.name, scales = "free_y") +
+#   geom_errorbar(aes(ymin=count-se, ymax=count+se), linewidth=0.5, width=.075) +
+#   scale_colour_manual(values = c("blue", "lightblue", "salmon", "red3")) + #set line color
+#   geom_vline(xintercept = 9.3, linetype="dashed", color = "grey")+
+#   theme_bw() + 
+#   theme(axis.text.x=element_text(angle = 45, vjust = 1, hjust=1, size = 12), #set x-axis label size
+#         axis.title.x=element_text(size = 14), #set x-axis title size
+#         axis.ticks.x=element_blank(), #No x-label ticks
+#         #axis.title.y=element_blank(), #No y-axis title
+#         axis.text.y=element_text(size = 14), #set y-axis label size, 
+#         panel.border = element_rect(color = "black", fill = NA, size = 1), #set border
+#         panel.grid.major = element_blank(), #Set major gridlines
+#         panel.grid.minor = element_blank(), #Set minor gridlines
+#         axis.line = element_line(colour = "black"), #Set axes color
+#         plot.background=element_blank(),
+#         strip.text.x = element_text(size = 16, face = "bold.italic"),
+#         plot.title = element_text(size=22))
+# 
+# ggsave(filename="data/RNASeq/methylation_geneexp_Mcap_all.jpeg", 
+#        plot=meth_genes_all, dpi=300, width=14, height=10, units="in")
+```
+
+### Pacuta 
+
+Top DNMT1 gene: Pocillopora_acuta_HIv2___RNAseq.g18721.t1
+Top DNMT3 gene: Pocillopora_acuta_HIv2___TS.g14943.t1 
+Top TET gene: Pocillopora_acuta_HIv2___RNAseq.g20468.t1 
+Top MBD gene: Pocillopora_acuta_HIv2___RNAseq.g26240.t1
+Top UHRF gene: Pocillopora_acuta_HIv2___RNAseq.g27856.t2
+
+Pull in ploidy information. 
+
+```{r}
+pacuta_counts_epi_subset <- pacuta_counts_epi %>% 
+  gather("Plug_ID", "count", 2:52) %>% #120 for env. groups 
+  left_join(., Pacuta_meta, by = "Plug_ID") %>% 
+  left_join(., pacutablast, by = "gene_id") %>%
+  mutate(protein.name = str_replace_all(protein.name ,"TET1", "TET"),
+         protein.name = str_replace_all(protein.name ,"MBD2", "MBD"),
+         protein.name = str_replace_all(protein.name ,"MBD3", "MBD"),
+         protein.name = str_replace_all(protein.name ,"DNMT3A", "DNMT3")) %>%
+  subset(gene_id == "Pocillopora_acuta_HIv2___RNAseq.g18721.t1" |
+           gene_id == "Pocillopora_acuta_HIv2___TS.g14943.t1" |
+           gene_id == "Pocillopora_acuta_HIv2___RNAseq.g20468.t1" |
+           gene_id == "Pocillopora_acuta_HIv2___RNAseq.g26240.t1" |
+           gene_id == "Pocillopora_acuta_HIv2___RNAseq.g27856.t2") %>%
+  dplyr::select(protein.name, Plug_ID, count, gene_id, meth_exp_group) %>% 
+  distinct() %>%
+  filter(!c(gene_id == "Pocillopora_acuta_HIv2___TS.g14943.t1" & protein.name == "MBD")) %>%
+  filter(!c(gene_id == "Pocillopora_acuta_HIv2___RNAseq.g26240.t1" & protein.name == "DNMT3"))
+
+pacuta_epi_means_subset <- summarySE(pacuta_counts_epi_subset, measurevar = c("count"), 
+                                 groupvars = c("gene_id", "meth_exp_group")) %>% 
+  left_join(., pacutablast, by = "gene_id")
+
+pacuta_counts_epi_all <- pacuta_counts_epi %>% 
+  gather("Plug_ID", "count", 2:52) %>%
+  left_join(., Pacuta_meta, by = "Plug_ID") %>% 
+  left_join(., pacutablast, by = "gene_id") %>%
+  mutate(protein.name = str_replace_all(protein.name ,"TET1", "TET"),
+         protein.name = str_replace_all(protein.name ,"MBD2", "MBD"),
+         protein.name = str_replace_all(protein.name ,"MBD3", "MBD"),
+         protein.name = str_replace_all(protein.name ,"DNMT3A", "DNMT3")) %>%
+  dplyr::select(protein.name, Plug_ID, count, gene_id, meth_exp_group) %>% 
+  distinct()
+
+pacuta_epi_means_all <- summarySE(pacuta_counts_epi_all, measurevar = c("count"), 
+                                 groupvars = c("protein.name", "meth_exp_group"))
+```
+
+```{r}
+pacuta_meth_genes_sub <- pacuta_counts_epi_subset %>%
+  subset(protein.name == "DNMT1" | protein.name == "DNMT3" | protein.name == "TET" |
+         protein.name == "MBD" | protein.name == "UHRF1") %>%
+  ggplot(aes(x=meth_exp_group, y=count, colour=meth_exp_group)) +
+  geom_boxplot() +
+  geom_jitter(alpha=0.5, width = 0.25) +  
+  ylab("") +
+  facet_wrap(~protein.name, scales = "free_y") +
+  theme_classic() + 
+  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+    theme(strip.text.x = element_text(size = 12, color = "black", face = "bold"),
+          strip.text.y = element_text(size = 12, color = "black", face = "bold")) +
+    theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
+
+ggsave(filename="data/RNASeq/methylation_geneexp_pacuta_tophit.jpeg", 
+       plot=pacuta_meth_genes_sub, dpi=300, width=8, height=5, units="in")
+
+pacuta_meth_genes_all <- pacuta_counts_epi_all %>%
+  subset(protein.name == "DNMT1" | protein.name == "DNMT3" | protein.name == "TET" |
+         protein.name == "MBD" | protein.name == "UHRF1") %>%
+  ggplot(aes(x=meth_exp_group, y=count, colour=meth_exp_group)) +
+  geom_boxplot() +
+  geom_jitter(alpha=0.5, width = 0.25) +  
+  ylab("") +
+  facet_wrap(~protein.name, scales = "free_y") +
+  theme_classic() + 
+  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+    theme(strip.text.x = element_text(size = 12, color = "black", face = "bold"),
+          strip.text.y = element_text(size = 12, color = "black", face = "bold")) +
+    theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
+
+ggsave(filename="data/RNASeq/methylation_geneexp_pacuta_all.jpeg", 
+       plot=pacuta_meth_genes_all, dpi=300, width=14, height=10, units="in")
+```
+
+### statistics 
+
+Top DNMT1 gene: Pocillopora_acuta_HIv2___RNAseq.g18721.t1
+Top DNMT3 gene: Pocillopora_acuta_HIv2___TS.g14943.t1 
+Top TET gene: Pocillopora_acuta_HIv2___RNAseq.g20468.t1 
+Top MBD gene: Pocillopora_acuta_HIv2___RNAseq.g26240.t1
+Top UHRF gene: Pocillopora_acuta_HIv2___RNAseq.g27856.t2
+
+```{r}
+pacuta_counts_epi_subset_stats <- pacuta_counts_epi_subset %>% 
+  left_join(., Pacuta_meta, by=c("Plug_ID", "meth_exp_group")) %>%
+  subset(gene_id == "Pocillopora_acuta_HIv2___RNAseq.g26240.t1")
+
+aov <-aov(count ~ meth_exp_group, data=pacuta_counts_epi_subset_stats)
+summary(aov)
+TukeyHSD(aov)
+```
+
+### DMG expression 
+
+```{r}
+library(ggpmisc)
+
+## start with the below df from DMG script (gene.stats) for full dataset and (gene.stats.DMGs) for DMGs 
+gene.stats.forGE <- gene.stats.DMGs %>% dplyr::select(Sample.ID, gene, mean.gene) %>% distinct()
+gene.stats.forGE$Sample.ID <- as.character(gene.stats.forGE$Sample.ID)
+
+## start with the below df from above GE analysis 
+GE.stats.formeth <- as.data.frame(assay(Pacuta_gvst_dev)) %>% 
+  rownames_to_column(., var="gene") %>%
+  gather("Sample.ID", "count", 2:52) %>% filter(!is.na(count))  
+
+GE.meth.stats.df <- full_join(gene.stats.forGE, GE.stats.formeth, by=c("Sample.ID", "gene")) %>%
+  dplyr::rename(., Plug_ID = Sample.ID) %>%
+  left_join(., Pacuta_methgroups, by = "Plug_ID") %>% na.omit() %>%
+  gather("measurement", "value", 3:4)
+  
+GE.meth.summary <- summarySE(GE.meth.stats.df, measurevar = c("value"), 
+                               groupvars = c("measurement", "gene", "meth_exp_group"))
+
+GE.summary <- GE.meth.summary %>% filter(measurement == "count") %>% 
+  dplyr::select(gene, meth_exp_group, value, sd) %>% dplyr::rename(count = value) %>% dplyr::rename(count_sd = sd) 
+meth.summary <- GE.meth.summary %>% filter(measurement == "mean.gene") %>% 
+  dplyr::select(gene, meth_exp_group, value, sd) %>% dplyr::rename(per.meth = value) %>% dplyr::rename(meth_sd = sd) 
+
+GE.meth.summary2 <- full_join(GE.summary, meth.summary, by = c("gene", "meth_exp_group")) %>%
+  mutate(CV = (count_sd/count),
+         inv_CV = (1/CV),
+         log_expression = log10(count+1)) %>%
+  filter_all(all_vars(!is.infinite(.)))
+```
+
+```{r}
+#load the multcomp library
+library(multcomp)
+
+GE.meth.summary2$meth_exp_group <- as.factor(GE.meth.summary2$meth_exp_group)
+
+fit1=aov(inv_CV~meth_exp_group*log_expression, data = GE.meth.summary2)
+fit2=aov(inv_CV~meth_exp_group*log_expression, data = GE.meth.summary2)
+anova(fit1,fit2)  # figure out which model to use 
+
+Anova(fit1, type="III")
+
+#define the post hoc comparisons to make
+summary(glht(fit1, linfct = mcp(meth_exp_group = "Tukey")))
+```
+
+```{r}
+GE.meth.summary2.plot <-GE.meth.summary2 %>%
+  ggplot(., aes(x=per.meth, y=log_expression, color=meth_exp_group)) + theme_bw() +
+  geom_point(alpha=0.2, size=0.5) + 
+  ylab("gene exp CV-1") + 
+  xlab("Methylation %") + 
+  #xlab("log10 (mean exp +1)") +
+  #ylab("log10 (mean exp +1)") +
+  stat_poly_line(linewidth=1) +
+  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+  stat_poly_eq() +
+  theme(strip.text.x = element_text(size = 12, color = "black", face = "bold"),
+  strip.text.y = element_text(size = 12, color = "black", face = "bold")) +
+  theme(strip.background = element_rect(color="black", fill="white", size=0.5, linetype="solid"))
+
+ggsave(filename="data/WGBS/output/figures/meth_all_logGE_CV.jpeg", 
+       plot=GE.meth.summary2.plot, dpi=300, width=5.75, height=4.25, units="in")
+
+aov <-aov(CV ~ treesplit, data=DMG_module36means)
+summary(aov)
+TukeyHSD(aov)
+```
+
+## Expression of hypermethylation in ploidy groups 
+
+```{r}
+GE.meth.summary2 ## make sure to start with the sig DMG version 
+meth_hypergroups_trip2 <- GE.meth.summary2 %>% 
+  filter(gene %in% hypermeth_trip2$gene) %>% relocate(count, per.meth, CV, inv_CV, log_expression) 
+meth_hypergroups_trip1 <- GE.meth.summary2 %>% 
+  filter(gene %in% hypermeth_trip1$gene) %>% relocate(count, per.meth, CV, inv_CV, log_expression)
+meth_hypergroups_dip <- GE.meth.summary2 %>% 
+  filter(gene %in% hypermeth_dip$gene) %>% relocate(count, per.meth, CV, inv_CV, log_expression)
+
+fit3 <- aov(CV ~ meth_exp_group, meth_hypergroups_trip2)
+summary(fit3)
+TukeyHSD(fit3, conf.level=.95)
+
+ploidy_metrics_plot <- GE.meth.summary2 %>%
+  ggplot(., aes(x=meth_exp_group, y=CV, color=meth_exp_group)) + theme_bw() + xlab("") +
+  geom_boxplot() + geom_jitter(size=0.3, alpha=0.2, width=0.25) + 
+  #facet_wrap(~loci_status, scales = "free_y") +
+  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+  theme(strip.text.x = element_text(size = 10, color = "black", face = "bold"),
+        strip.text.y = element_text(size = 10, color = "black", face = "bold")) +
+  theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
+
+ggsave(filename="data/WGBS/output/figures/metrics_DMG_CV.jpeg", 
+       plot=ploidy_metrics_plot, dpi=300, width=4.5, height=3, units="in")
+```
+
+
+
+
+```{r}
+#diploidy_metrics_plot
+#triploidy1_metrics_plot
+diploidy_metrics_plot <- meth_hypergroups_dip %>% 
+  gather("metric", "value", 1:5) %>%
+  filter(metric == "CV" | metric == "log_expression") %>%
+  ggplot(., aes(x=meth_exp_group, y=value, color=meth_exp_group)) + theme_classic() +
+  geom_boxplot() + geom_jitter(size=0.75, alpha=0.2, width = 0.2) +
+  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+  facet_wrap(~metric, scales = "free_y") +
+    theme(axis.text.x=element_text(angle = 45, vjust = 1, hjust=1, size = 12), #set x-axis label size
+        axis.title.x=element_text(size = 14), #set x-axis title size
+        axis.ticks.x=element_blank(), #No x-label ticks
+        #axis.title.y=element_blank(), #No y-axis title
+        axis.text.y=element_text(size = 14), #set y-axis label size, 
+        panel.border = element_rect(color = "black", fill = NA, size = 1), #set border
+        panel.grid.major = element_blank(), #Set major gridlines
+        panel.grid.minor = element_blank(), #Set minor gridlines
+        axis.line = element_line(colour = "black"), #Set axes color
+        plot.background=element_blank(),
+        strip.text.x = element_text(size = 16, face = "bold"),
+        plot.title = element_text(size=22))
+
+ggsave(filename="data/WGBS/output/figures/metrics_diploidy.jpeg", 
+       plot=diploidy_metrics_plot, dpi=300, width=7, height=4, units="in")
+
+aov <-aov(CV ~ meth_exp_group, data=GE.meth.summary2) #inv_CV, CV, per.meth, log_expression
+summary(aov)
+TukeyHSD(aov)
+```
+
