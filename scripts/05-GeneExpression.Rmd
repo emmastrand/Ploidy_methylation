@@ -13,6 +13,147 @@ editor_options:
   chunk_output_type: inline
 ---
 
+## Load libraries 
+
+```{r}
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library("RColorBrewer")
+library("tidyverse")
+library("ggpubr")
+library("DESeq2")
+library("genefilter")
+library(Rmisc)
+library(lme4)
+library(car)
+library(purrr)
+library(lubridate)
+library(Hmisc)
+library(naniar)
+library(stats)
+library(forcats)
+library(data.table)
+library(writexl)
+library(ggpmisc)
+library(multcomp)
+```
+
+## Load data 
+
+```{r}
+GEdata <- read.delim("data/Pocillopora_acuta_KBHIv2.gentrome.fa.gz.salmon.numreads.matrix") %>%
+  dplyr::rename(gene_id = Name) %>% gather(., "Sample.ID", "count", 2:120) %>%
+  mutate(Sample.ID = str_remove(Sample.ID, ".*_")) 
+
+meta <- read.csv("data/metadata/meth_pattern_groups.csv") %>% dplyr::select(-X) 
+
+GEdata_filtered <- GEdata %>% filter(Sample.ID %in% meta$Sample.ID) %>%
+  spread(., Sample.ID, count) %>%
+  mutate(gene_id = str_replace_all(gene_id, "KB", ""))
+```
+
+## Data filtering: PoverA and genefilter
+
+Conduct data filtering, this includes:  
+
+*pOverA*: Specifying the minimum count for a proportion of samples for each gene. Filter in the package "genefilter". Pre-filtering our dataset to reduce the memory size dataframe, increase the speed of the transformation and testing functions, and improve quality of statistical analysis by removing low-coverage counts. Removed counts could represent outliers in the data and removing these improves sensitivity of statistical tests. 
+
+### Pacuta 
+
+**Methylation pattern group**: Here, we are using a pOverA of 0.294. This is because we have 51 samples with a minimum of n=15 samples per group. Therefore, we will accept genes that are present in 15/51 = 0.294 of the samples because we expect different expression by ploidy. We are further setting the minimum percentage of genes to 1, such that 29.4% of the samples must have a counts minimum of 10.  
+
+``` {r, echo=TRUE, warning=FALSE, message=FALSE}
+Pacuta_matrix <- GEdata_filtered %>% column_to_rownames(., var = "gene_id")
+Pfilt <- filterfun(pOverA(0.294,10))
+
+#create filter for the counts data
+Pgfilt <- genefilter(Pacuta_matrix, Pfilt)
+
+#identify genes to keep by count filter
+Pkeep <- Pacuta_matrix[Pgfilt,]
+
+#identify gene lists
+Pn.keep <- rownames(Pkeep)
+
+#gene count data filtered in PoverA, P percent of the samples have counts over A
+Pacuta_data_filt <- as.data.frame(Pacuta_matrix[which(rownames(Pacuta_matrix) %in% Pn.keep),])
+
+#How many rows do we have before and after filtering?
+nrow(Pacuta_matrix) #Before = 33,259
+nrow(Pacuta_data_filt) #After = 19,128 for ploidy 
+#Filtering removed 14,131 in ploidy analysis 
+```
+
+In order for the DESeq2 algorithms to work, the SampleIDs on the treatmentinfo file and count matrices have to match exactly and in the same order. The following R clump will check to make sure that these match.
+
+```{r}
+#Checking that all row and column names match. Should return "TRUE"
+all(meta$Sample.ID %in% colnames(Pacuta_data_filt))
+all(meta$Sample.ID == colnames(Pacuta_data_filt)) 
+```
+## Read normalization
+We are now going normalize our read counts using VST-normalization in DESeq2
+
+### Construct the DESeq2 dataset
+
+Create a DESeqDataSet design from gene count matrix and labels. Here we set the design to look at time_point to test for any differences in gene expression across timepoints.
+
+```{r}
+Pacuta_gdds_dev <- DESeqDataSetFromMatrix(countData = round(Pacuta_data_filt),
+                              colData = meta,
+                              design = ~meth_exp_group)
+
+## combine DESeq matrix so can directly compare and normalize them together 
+pacuta_forall <- Pacuta_data_filt %>% 
+  rownames_to_column(., var="gene_id") %>%
+  gather(., "Sample.ID", "count", 2:52) #120 for all pacuta 
+
+all_data_filt <- pacuta_forall %>% 
+  spread(., Sample.ID, count) %>%
+  column_to_rownames(., var="gene_id")
+```
+
+#### Log-transform the count data
+
+First we are going to log-transform the data using a variance stabilizing transforamtion (VST). This is only for visualization purposes. Essentially, this is roughly similar to putting the data on the log2 scale. It will deal with the sampling variability of low counts by calculating within-group variability (if blind=FALSE). Importantly, it does not use the design to remove variation in the data, and so can be used to examine if there may be any variability do to technical factors such as extraction batch effects.
+
+To do this we first need to calculate the size factors of our samples. This is a rough estimate of how many reads each sample contains compared to the others. In order to use VST (the faster log2 transforming process) to log-transform our data, the size factors need to be less than 4. Otherwise, there could be artefacts in our results.
+
+```{r}
+Pacuta_SF.gdds_dev <- estimateSizeFactors(Pacuta_gdds_dev) #estimate size factors to determine if we can use vst  to transform our data. Size factors should be less than four to use vst
+print(sizeFactors(Pacuta_SF.gdds_dev)) #View size factors
+```
+
+Our size factors are all less than 4, so we can use VST!
+
+```{r}
+Pacuta_gvst_dev <- vst(Pacuta_gdds_dev, blind=FALSE) #apply a variance stabilizing transforamtion to minimize effects of small counts and normalize wrt library size
+head(assay(Pacuta_gvst_dev), 3) #view transformed gene count data
+
+## create data matrix 
+pacuta_counts <- as.data.frame(assay(Pacuta_gvst_dev)) 
+```
+
+## Gene expression counts and CV versus DNA methylation levels
+
+
+Left off at reading in gene.stats.DMGs from script #2; I think I need to export this from script 02 first 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
