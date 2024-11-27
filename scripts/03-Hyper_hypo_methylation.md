@@ -24,9 +24,9 @@ library(tidyverse)
 ## Load data
 
 ``` r
-load("data/WGBS/zscore.RData") ## zscore_df
-load("data/WGBS/Heatmap_output.RData") ## heatmap_df
-load("data/WGBS/Heatmap_input.RData") ## All_data
+load("data/WGBS/heatmap/zscore.RData") ## zscore_df
+load("data/WGBS/heatmap/Heatmap_output.RData") ## heatmap_df
+load("data/WGBS/heatmap/Heatmap_input.RData") ## All_data
 
 groups <- read.csv("data/metadata/meth_pattern_groups.csv") %>% dplyr::select(-X)
 groups$Sample.ID <- as.character(groups$Sample.ID)
@@ -98,13 +98,13 @@ hypometh_trip1 <- zscore_median %>% filter(T1 < -0.75)
 # Genes that are hypomethylated in Diploidy (and not in Triploidy 2 or Triploidy 1)  = 143 genes
 hypometh_dip <- zscore_median %>% filter(D < -0.75) 
 
-hypermeth_trip2 %>% write.csv("data/WGBS/DMG_hypermeth_triploidy2.csv", row.names = FALSE)
-hypermeth_trip1 %>% write.csv("data/WGBS/DMG_hypermeth_triploidy1.csv", row.names = FALSE)
-hypermeth_dip %>% write.csv("data/WGBS/DMG_hypermeth_diploidy.csv", row.names = FALSE)
+hypermeth_trip2 %>% write.csv("data/WGBS/hyper-hypo methylation/DMG_hypermeth_triploidy2.csv", row.names = FALSE)
+hypermeth_trip1 %>% write.csv("data/WGBS/hyper-hypo methylation/DMG_hypermeth_triploidy1.csv", row.names = FALSE)
+hypermeth_dip %>% write.csv("data/WGBS/hyper-hypo methylation/DMG_hypermeth_diploidy.csv", row.names = FALSE)
 
-hypometh_trip2 %>% write.csv("data/WGBS/DMG_hypometh_triploidy2.csv", row.names = FALSE)
-hypometh_trip1 %>% write.csv("data/WGBS/DMG_hypometh_triploidy1.csv", row.names = FALSE)
-hypometh_dip %>% write.csv("data/WGBS/DMG_hypometh_diploidy.csv", row.names = FALSE)
+hypometh_trip2 %>% write.csv("data/WGBS/hyper-hypo methylation/DMG_hypometh_triploidy2.csv", row.names = FALSE)
+hypometh_trip1 %>% write.csv("data/WGBS/hyper-hypo methylation/DMG_hypometh_triploidy1.csv", row.names = FALSE)
+hypometh_dip %>% write.csv("data/WGBS/hyper-hypo methylation/DMG_hypometh_diploidy.csv", row.names = FALSE)
 ```
 
 Plotting the hyper-meth/hypo-meth levels above
@@ -171,5 +171,5 @@ subset_gene_list %>%
 ![](03-Hyper_hypo_methylation_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
 ``` r
-ggsave(filename="data/figures/Zscore_hypometh_diploidy.jpeg", dpi=300, width=3.5, height=5, units="in")
+ggsave(filename="data/figures/Supplemental Figure 4 Zscore_hypometh_diploidy.jpeg", dpi=300, width=3.5, height=5, units="in")
 ```

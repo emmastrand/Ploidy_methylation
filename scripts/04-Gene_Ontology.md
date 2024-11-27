@@ -56,12 +56,12 @@ load("data/WGBS/meth_table5x_filtered2_sigDMG.RData")
 #meth_table5x_filtered2_sigDMG <- read.csv("data/WGBS/output/meth_table5x_filtered2_sigDMG.csv") %>% dplyr::select(-X)
 ## OR run other script (DMG-Pacuta.Rmd) to create this file and then run this script
 
-hypermeth_trip2 <- read.csv("data/WGBS/DMG_hypermeth_triploidy2.csv") 
-hypermeth_trip1 <- read.csv("data/WGBS/DMG_hypermeth_triploidy1.csv") 
-hypermeth_dip <- read.csv("data/WGBS/DMG_hypermeth_diploidy.csv") 
-hypometh_dip <- read.csv("data/WGBS/DMG_hypometh_diploidy.csv")
-hypometh_trip1 <- read.csv("data/WGBS/DMG_hypometh_triploidy1.csv")
-hypometh_trip2 <- read.csv("data/WGBS/DMG_hypometh_triploidy2.csv")
+hypermeth_trip2 <- read.csv("data/WGBS/hyper-hypo methylation/DMG_hypermeth_triploidy2.csv") 
+hypermeth_trip1 <- read.csv("data/WGBS/hyper-hypo methylation/DMG_hypermeth_triploidy1.csv") 
+hypermeth_dip <- read.csv("data/WGBS/hyper-hypo methylation/DMG_hypermeth_diploidy.csv") 
+hypometh_dip <- read.csv("data/WGBS/hyper-hypo methylation/DMG_hypometh_diploidy.csv")
+hypometh_trip1 <- read.csv("data/WGBS/hyper-hypo methylation/DMG_hypometh_triploidy1.csv")
+hypometh_trip2 <- read.csv("data/WGBS/hyper-hypo methylation/DMG_hypometh_triploidy2.csv")
 
 hypermeth_trip2_GOlist <- meth_table5x_filtered2_sigDMG[meth_table5x_filtered2_sigDMG$gene %in% hypermeth_trip2$gene,]
 hypermeth_trip1_GOlist <- meth_table5x_filtered2_sigDMG[meth_table5x_filtered2_sigDMG$gene %in% hypermeth_trip1$gene,]
@@ -74,7 +74,7 @@ hypometh_trip2_GOlist <- meth_table5x_filtered2_sigDMG[meth_table5x_filtered2_si
 ### Read in gff file to get lengths and merge with gene_meta created file
 
 ``` r
-eggNOGG <- read.delim(file = "data/Pocillopora_acuta_HIv2.genes.EggNog_results.txt",
+eggNOGG <- read.delim(file = "data/gene expression/Pocillopora_acuta_HIv2.genes.EggNog_results.txt",
                       sep = "\t", header=TRUE) %>% dplyr::rename(gene = X.query)
 
 # OE <- read.csv(file = "data/WGBS/Pacuta_CpGOE_full.csv", sep = ",",
@@ -86,7 +86,7 @@ eggNOGG <- read.delim(file = "data/Pocillopora_acuta_HIv2.genes.EggNog_results.t
 #merge with annotation information
 # gene_meta <- dplyr::full_join(eggNOGG, OE, by = "Gene") %>% dplyr::rename(gene = Gene)
 
-gff <- read.delim("data/Pocillopora_acuta_HIv2.genes.gff3", 
+gff <- read.delim("data/gene expression/Pocillopora_acuta_HIv2.genes.gff3", 
                   sep = "\t", header = FALSE) %>% dplyr::rename(gene = V9) %>% 
   dplyr::rename(start = V4) %>% 
   dplyr::rename(stop = V5) %>% 
@@ -416,7 +416,7 @@ GOenrich_hypermeth_trip2 <- goenrich5x(hypermeth_trip2_GO, triploidy2)
     ## 'select()' returned 1:1 mapping between keys and columns
 
 ``` r
-write.csv(GOenrich_hypermeth_trip2 , file = "data/WGBS/GOenrich_hypermeth_trip2.csv", row.names = FALSE)
+write.csv(GOenrich_hypermeth_trip2 , file = "data/WGBS/GOenrich/GOenrich_hypermeth_trip2.csv", row.names = FALSE)
 
 hypometh_trip2_GOlist <- hypometh_trip2_GOlist %>% dplyr::select(gene) %>% distinct()
 hypometh_trip2_GO <- left_join(hypometh_trip2_GOlist, gene_meta, by = "gene")
@@ -432,7 +432,7 @@ GOenrich_hypometh_trip2 <- goenrich5x(hypometh_trip2_GO, triploidy2)
     ## 'select()' returned 1:1 mapping between keys and columns
 
 ``` r
-write.csv(GOenrich_hypometh_trip2 , file = "data/WGBS/GOenrich_hypometh_trip2.csv", row.names = FALSE)
+write.csv(GOenrich_hypometh_trip2 , file = "data/WGBS/GOenrich/GOenrich_hypometh_trip2.csv", row.names = FALSE)
 
 hypermeth_trip1_GOlist <- hypermeth_trip1_GOlist %>% dplyr::select(gene) %>% distinct()
 hypermeth_trip1_GO <- left_join(hypermeth_trip1, gene_meta, by = "gene")
@@ -448,7 +448,7 @@ GOenrich_hypermeth_trip1 <- goenrich5x(hypermeth_trip1_GO, triploidy1)
     ## 'select()' returned 1:1 mapping between keys and columns
 
 ``` r
-write.csv(GOenrich_hypermeth_trip1 , file = "data/WGBS/GOenrich_hypermeth_trip1.csv", row.names = FALSE)
+write.csv(GOenrich_hypermeth_trip1 , file = "data/WGBS/GOenrich/GOenrich_hypermeth_trip1.csv", row.names = FALSE)
 
 hypometh_trip1_GOlist <- hypometh_trip1_GOlist %>% dplyr::select(gene) %>% distinct()
 hypometh_trip1_GO <- left_join(hypometh_trip1_GOlist, gene_meta, by = "gene")
@@ -466,7 +466,7 @@ GOenrich_hypometh_trip1 <- goenrich5x(hypometh_trip1_GO, triploidy1)
     ## 'select()' returned 1:1 mapping between keys and columns
 
 ``` r
-write.csv(GOenrich_hypometh_trip1 , file = "data/WGBS/GOenrich_hypometh_trip1.csv", row.names = FALSE)
+write.csv(GOenrich_hypometh_trip1 , file = "data/WGBS/GOenrich/GOenrich_hypometh_trip1.csv", row.names = FALSE)
 
 hypermeth_dip_GOlist <- hypermeth_dip_GOlist %>% dplyr::select(gene) %>% distinct()
 hypermeth_dip_GO <- left_join(hypermeth_dip, gene_meta, by = "gene")
@@ -482,7 +482,7 @@ GOenrich_hypermeth_dip <- goenrich5x(hypermeth_dip_GO, diploidy)
     ## 'select()' returned 1:1 mapping between keys and columns
 
 ``` r
-write.csv(GOenrich_hypermeth_dip , file = "data/WGBS/GOenrich_hypermeth_dip.csv", row.names = FALSE)
+write.csv(GOenrich_hypermeth_dip , file = "data/WGBS/GOenrich/GOenrich_hypermeth_dip.csv", row.names = FALSE)
 
 hypometh_dip_GOlist <- hypometh_dip_GOlist %>% dplyr::select(gene) %>% distinct()
 hypometh_dip_GO <- left_join(hypometh_dip, gene_meta, by = "gene")
@@ -498,7 +498,7 @@ GOenrich_hypometh_dip <- goenrich5x(hypometh_dip_GO, diploidy)
     ## 'select()' returned 1:1 mapping between keys and columns
 
 ``` r
-write.csv(GOenrich_hypometh_dip , file = "data/WGBS/GOenrich_hypometh_dip.csv", row.names = FALSE)
+write.csv(GOenrich_hypometh_dip , file = "data/WGBS/GOenrich/GOenrich_hypometh_dip.csv", row.names = FALSE)
 
 # GOenrich_hypermeth_dip <- read.csv("data/WGBS/output/GOenrich_hypermeth_dip.csv") 
 # GOenrich_hypermeth_trip1 <- read.csv("data/WGBS/output/GOenrich_hypermeth_trip1.csv") 
@@ -711,7 +711,7 @@ GOenrich_hypermeth_annotated_total %>%
 ![](04-Gene_Ontology_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
 ``` r
-ggsave("data/figures/GOenrich_term_hypermeth.png", dpi=300, width=9, height=10.5, units="in")
+ggsave("data/figures/Fig3_GOenrich_term_hypermeth.png", dpi=300, width=9, height=10.5, units="in")
 ```
 
     ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:
@@ -941,7 +941,7 @@ GOenrich_hypometh_annotated_total %>%
 ![](04-Gene_Ontology_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
 
 ``` r
-ggsave("data/figures/GOenrich_term_hypometh.png", dpi=300, width=9.67, height=10.5, units="in")
+ggsave("data/figures/Fig3_GOenrich_term_hypometh.png", dpi=300, width=9.67, height=10.5, units="in")
 ```
 
     ## Warning in mean.default(X[[i]], ...): argument is not numeric or logical:

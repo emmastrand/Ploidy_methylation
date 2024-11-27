@@ -1,5 +1,5 @@
 ---
-title: "Methylseq statistics"
+title: "Methylation statistics"
 author: "EL Strand"
 output:
   github_document: default
@@ -12,10 +12,6 @@ output:
 editor_options: 
   chunk_output_type: inline
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 Based on Kevin Wong's methylseq analysis scripts. 
 

@@ -75,6 +75,8 @@ gene.stats.DMGs <- meth_table5x_filtered2_sigDMG %>%
   dplyr::group_by(Sample.ID) %>%
   mutate(median.sample = median(median.gene),
          mean.sample = mean(mean.gene)) %>% ungroup()
+
+gene.stats.DMGs %>% write.csv("data/WGBS/DMG_statistics.csv", row.names = FALSE)
   
 fig2C <- gene.stats.DMGs %>% 
   subset(!meth_exp_group == "ungroup") %>%
@@ -203,7 +205,7 @@ col_labels_df <- heatmap.sample.DMG.df %>% dplyr::select(Sample.ID, meth_exp_gro
   ))
 col_labels <- col_labels_df$color
 
-pdf("data/figures/Heatmap_samples_DMG.pdf")
+pdf("data/figures/Fig2D_Heatmap_samples_DMG.pdf")
 heatmap_df<-
   heatmap.2(All_mat,
           cexCol = 1.5, 
@@ -241,9 +243,9 @@ dev.off()
 ``` r
 ## extracting data from heatmapdf
 zscore_df <- as.data.frame(heatmap_df$carpet) ##carpet score is the zscore that goes into the heatmap
-save(zscore_df, file = "data/WGBS/zscore.RData")
-save(heatmap_df, file = "data/WGBS/Heatmap_output.RData")
-save(All_data, file = "data/WGBS/Heatmap_input.RData")
+save(zscore_df, file = "data/WGBS/heatmap/zscore.RData")
+save(heatmap_df, file = "data/WGBS/heatmap/Heatmap_output.RData")
+save(All_data, file = "data/WGBS/heatmap/Heatmap_input.RData")
 ```
 
 ## Principal Components Analysis & PERMANOVA
@@ -413,5 +415,5 @@ fig2_plots <- plot_grid(treatment_pca, ploidy_pca, fig2C,
           rel_heights = c(2,2,1.7),
           label_size = 18)
 
-ggsave("data/figures/Fig2.jpeg", fig2_plots, width = 5, height = 10)
+ggsave("data/figures/Fig2A-C PCAs.jpeg", fig2_plots, width = 5, height = 10)
 ```

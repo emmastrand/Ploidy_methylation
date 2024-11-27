@@ -13,12 +13,6 @@ editor_options:
   chunk_output_type: inline
 ---
 
-# Differentially Methylated Genes 
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 Input from this script: https://github.com/emmastrand/EmmaStrand_Notebook/blob/master/_posts/2021-10-21-KBay-Bleaching-Pairs-WGBS-Analysis-Pipeline.md#kbay-wgbs-methylation-analysis-pipeline
 
 I'm following Hollie Putnam and Kevin Wong's pipelines. 
@@ -146,45 +140,55 @@ df5x %>%
 Filtering to loci that have a median methylation level of >0% and filtering out genes that have less than 5 methylation loci 
 
 ```{r}
-df_filtered  <- df5x %>%
-  #### [11,283,247 × 20] at this point
-  unite(Loc, scaffold, position, remove = FALSE, sep = " ") %>%
-  
-  #filtering out loci that have a median methylation of <10% across all samples
-  group_by(Loc) %>%
-  mutate(loci_median = median(per.meth)) %>%
-  filter(loci_median > 0) %>% ungroup() %>%
-  ### 946,050 × 21 after 
-  
-  # filtering out genes with less than 5 positions of data 
-  dplyr::group_by(gene) %>%
-  mutate(n_positions = n_distinct(position)) %>% ungroup() %>% ## count the number of unique positions for each gene
-  filter(n_positions >= 5) %>% dplyr::select(-n_positions)
-  ### 314,313 × 21 after
+meth_table5x <- df5x
+meth_table5x$sample_gene <- paste0(meth_table5x$Sample.ID, meth_table5x$gene)
+meth_table5x_position_counts <- dplyr::count(meth_table5x, vars = c(sample_gene))
+meth_table5x_position_counts <- meth_table5x_position_counts[which(meth_table5x_position_counts$n > 5), ]
 
-length(unique(df_filtered$Loc))
-## 2,882 loci 
-length(unique(df_filtered$gene))
-## 359 genes 
+meth_table5x_filtered <- meth_table5x[meth_table5x$sample_gene %in% meth_table5x_position_counts$vars,]
+
+# df_filtered  <- df5x %>%
+#   #### [11,283,247 × 20] at this point
+#   unite(Loc, scaffold, position, remove = FALSE, sep = " ") %>%
+#   
+#   #filtering out loci that have a median methylation of <10% across all samples
+#   group_by(Loc) %>%
+#   mutate(loci_median = median(per.meth)) %>%
+#   filter(loci_median > 0) %>% ungroup() %>%
+#   ### 946,050 × 21 after 
+#   
+#   # filtering out genes with less than 5 positions of data 
+#   dplyr::group_by(gene) %>%
+#   mutate(n_positions = n_distinct(position)) %>% ungroup() %>% ## count the number of unique positions for each gene
+#   filter(n_positions >= 5) %>% dplyr::select(-n_positions)
+#   ### 314,313 × 21 after
+# 
+# length(unique(df_filtered$Loc))
+# ## 2,882 loci 
+# 
+# length(unique(df5x$gene)) ## 14,532 genes 
+# length(unique(df_filtered$gene))
+# ## 4,098 genes with median >0 
+# ## 359 genes 
 ```
 
 Filtering to loci that have a median methylation level of >0% and filtering out genes that have less than 5 methylation loci 
 
 ```{r}
-df_filtered_posONLY  <- df5x %>%
-  #### [11,283,247 × 20] at this point
-  unite(Loc, scaffold, position, remove = FALSE, sep = " ") %>%
-  
-  # filtering out genes with less than 5 positions of data 
-  dplyr::group_by(gene) %>%
-  mutate(n_positions = n_distinct(position)) %>% ungroup() %>% ## count the number of unique positions for each gene
-  filter(n_positions >= 5) %>% dplyr::select(-n_positions)
-  ### 9,625,587 × 20
-
-length(unique(df_filtered_posONLY$Loc))
-## 98,294 loci 
-length(unique(df_filtered_posONLY$gene))
-## 7,413 genes 
+# df_filtered_posONLY  <- df5x %>%
+#   #### [11,283,247 × 20] at this point
+#   unite(Loc, scaffold, position, remove = FALSE, sep = " ") %>%
+#   
+#   # filtering out genes with less than 5 positions of data 
+#   dplyr::group_by(gene) %>%
+#   mutate(n_positions = n_distinct(position)) %>% ungroup() %>% ## count the number of unique positions for each gene
+#   filter(n_positions >= 5) %>% dplyr::select(-n_positions)
+#   ### 9,625,587 × 20
+# 
+# length(unique(df_filtered_posONLY$Loc))
+# ## 98,294 loci 
+# length(unique(df_filtered_posONLY$gene))
+# ## 7,413 genes 
 ```
 
 ### Run loop for GLM 
@@ -192,113 +196,118 @@ length(unique(df_filtered_posONLY$gene))
 Binomial GLM to test for differentially methylated genes. For 359 genes this took ~1 min. 
 
 ```{r}
-## DELETE OLD VERSIONS OF THIS FILE BEFORE RUNNING
-unlink("data/WGBS/GLM_output_methpos_filter.txt")
-gs5x <- unique(df_filtered$gene)
-
-# Number of cores to use (this won't work on Windows)
-# num_cores <- detectCores() - 1
-
-# Split the sub_meth_table.10x dataframe by 'gene'
-split_dfs <- split(df_filtered, df_filtered$gene)
-
-# Preparing objects for data collection
-results <- list()
-results$Stats <- data.frame(matrix(nrow=length(gs5x), ncol=2), row.names=gs5x)
-colnames(results$Stats) <- c("gene", "pvalue_treatment")
-
-## Defining the run_glm function
-run_glm <- function(data){
-  
-  #Bayesian model
-  fit <- glm(matrix(c(meth, unmeth), ncol=2) ~ meth_exp_group, 
-             data=data, family=binomial)
-  
-  a <- anova(fit, test="Chisq")
-  
-  Gene <- unique(data$gene)
-  
-  #Gathering convergence stats
-  results$Stats[Gene, ] <- c(Gene, a$`Pr(>Chi)`[2])
-  
-  write.table(results$Stats[Gene, ], "data/WGBS/GLM_output_methpos_filter.txt", 
-              col.names=F, row.names=T, quote=F, append=T)
-  
-}
-
-### Lapply for the GLM 
-### this will run through the run_glm function for multiple genes at a time and output
-mclapply(split_dfs, run_glm)
+# ## DELETE OLD VERSIONS OF THIS FILE BEFORE RUNNING
+# unlink("data/WGBS/GLM_output_methpos_filter.txt")
+# gs5x <- unique(df_filtered$gene)
+# 
+# # Number of cores to use (this won't work on Windows)
+# # num_cores <- detectCores() - 1
+# 
+# # Split the sub_meth_table.10x dataframe by 'gene'
+# split_dfs <- split(df_filtered, df_filtered$gene)
+# 
+# # Preparing objects for data collection
+# results <- list()
+# results$Stats <- data.frame(matrix(nrow=length(gs5x), ncol=2), row.names=gs5x)
+# colnames(results$Stats) <- c("gene", "pvalue_treatment")
+# 
+# ## Defining the run_glm function
+# run_glm <- function(data){
+#   
+#   #Bayesian model
+#   fit <- glm(matrix(c(meth, unmeth), ncol=2) ~ meth_exp_group, 
+#              data=data, family=binomial)
+#   
+#   a <- anova(fit, test="Chisq")
+#   
+#   Gene <- unique(data$gene)
+#   
+#   #Gathering convergence stats
+#   results$Stats[Gene, ] <- c(Gene, a$`Pr(>Chi)`[2])
+#   
+#   write.table(results$Stats[Gene, ], "data/WGBS/GLM_output_methpos_filter.txt", 
+#               col.names=F, row.names=T, quote=F, append=T)
+#   
+# }
+# 
+# ### Lapply for the GLM 
+# ### this will run through the run_glm function for multiple genes at a time and output
+# mclapply(split_dfs, run_glm)
 ```
 
 Binomial GLM to test for differentially methylated genes. For 7,413 genes this took ~10 minutes. 
 
 ```{r}
-## DELETE OLD VERSIONS OF THIS FILE BEFORE RUNNING
-unlink("data/WGBS/GLM_output_posFilter_only.txt")
-gs5x <- unique(df_filtered_posONLY$gene)
-
-# Number of cores to use (this won't work on Windows)
-# num_cores <- detectCores() - 1
-
-# Split the sub_meth_table.10x dataframe by 'gene'
-split_dfs <- split(df_filtered_posONLY, df_filtered_posONLY$gene)
-test <- split_dfs[1]
-
-# Preparing objects for data collection
-results <- list()
-results$Stats <- data.frame(matrix(nrow=length(gs5x), ncol=2), row.names=gs5x)
-colnames(results$Stats) <- c("gene", "pvalue_treatment")
-
-## Defining the run_glm function
-run_glm <- function(data){
-  
-  #Bayesian model
-  fit <- glm(matrix(c(meth, unmeth), ncol=2) ~ meth_exp_group, 
-             data=data, family=binomial)
-  
-  a <- anova(fit, test="Chisq")
-  
-  Gene <- unique(data$gene)
-  
-  #Gathering convergence stats
-  results$Stats[Gene, ] <- c(Gene, a$`Pr(>Chi)`[2])
-  
-  write.table(results$Stats[Gene, ], "data/WGBS/GLM_output_posFilter_only.txt", 
-              col.names=F, row.names=T, quote=F, append=T)
-  
-}
-
-### Lapply for the GLM 
-### this will run through the run_glm function for multiple genes at a time and output
-mclapply(split_dfs, run_glm)
+# ## DELETE OLD VERSIONS OF THIS FILE BEFORE RUNNING
+# unlink("data/WGBS/GLM_output_posFilter_only.txt")
+# gs5x <- unique(df_filtered_posONLY$gene)
+# 
+# # Number of cores to use (this won't work on Windows)
+# # num_cores <- detectCores() - 1
+# 
+# # Split the sub_meth_table.10x dataframe by 'gene'
+# split_dfs <- split(df_filtered_posONLY, df_filtered_posONLY$gene)
+# test <- split_dfs[1]
+# 
+# # Preparing objects for data collection
+# results <- list()
+# results$Stats <- data.frame(matrix(nrow=length(gs5x), ncol=2), row.names=gs5x)
+# colnames(results$Stats) <- c("gene", "pvalue_treatment")
+# 
+# ## Defining the run_glm function
+# run_glm <- function(data){
+#   
+#   #Bayesian model
+#   fit <- glm(matrix(c(meth, unmeth), ncol=2) ~ meth_exp_group, 
+#              data=data, family=binomial)
+#   
+#   a <- anova(fit, test="Chisq")
+#   
+#   Gene <- unique(data$gene)
+#   
+#   #Gathering convergence stats
+#   results$Stats[Gene, ] <- c(Gene, a$`Pr(>Chi)`[2])
+#   
+#   write.table(results$Stats[Gene, ], "data/WGBS/GLM_output_posFilter_only.txt", 
+#               col.names=F, row.names=T, quote=F, append=T)
+#   
+# }
+# 
+# ### Lapply for the GLM 
+# ### this will run through the run_glm function for multiple genes at a time and output
+# mclapply(split_dfs, run_glm)
 ```
 
 Reading in those df so don't need to calculate every time 
 
 ```{r}
-results_filtered <- read.delim2("data/WGBS/GLM_output_methpos_filter.txt")
-results_posonly_filtered <- read.delim2("data/WGBS/GLM_output_posFilter_only.txt")
+# results_filtered <- read.delim2("data/WGBS/GLM_output_methpos_filter.txt")
+# results_posonly_filtered <- read.delim2("data/WGBS/GLM_output_posFilter_only.txt")
 ```
-
 
 ## Calculating adjusted p-values for glm
 
 ```{r}
-## adjusting p-values 
-results_filtered$adj_pvalue_treatment <- p.adjust(results_filtered$pvalue_treatment, method='BH')
-results_posonly_filtered$adj_pvalue_treatment <- p.adjust(results_posonly_filtered$pvalue_treatment, method='BH')
-
-## filtering to p-values above 0.05 
-results_filtered_significant <- results_filtered %>% filter(adj_pvalue_treatment <= 0.050)
-results_posonly_filtered_significant <- results_posonly_filtered %>% filter(adj_pvalue_treatment <= 0.050)
+# ## adjusting p-values 
+# results_filtered$adj_pvalue_treatment <- p.adjust(results_filtered$pvalue_treatment, method='BH')
+# results_posonly_filtered$adj_pvalue_treatment <- p.adjust(results_posonly_filtered$pvalue_treatment, method='BH')
+# 
+# ## filtering to p-values above 0.05 
+# results_filtered_significant <- results_filtered %>% filter(adj_pvalue_treatment <= 0.050)
+# results_posonly_filtered_significant <- results_posonly_filtered %>% filter(adj_pvalue_treatment <= 0.050)
 ```
 
 ### subsetting new df to only those adjusted p value columns 
 
-methgroup: 3,870 genes significantly DMG out of 9,467 genes that had at least 5 methylated positions and appeared in all samples.
+methgroup: 3,870 genes significantly DMG out of 9,467 genes that had at least 5 positions and appeared in all samples.
 
 ```{r}
+results5x <- read.csv("data/WGBS/results5x_methgroup.csv", header = TRUE) %>% 
+  dplyr::select(-X) %>% distinct() ## distinct() necessary in case the model above went through multiple times
+
+results5x[is.na(results5x)] <- 0
+results5x$adj.pval.methgroup <- p.adjust(results5x$pval.methgroup, method='BH')
+
 DMG_5x_sig <- results5x %>%
   dplyr::select(gene, adj.pval.methgroup) %>% 
   mutate(across(2, round, 8)) %>%
@@ -322,6 +331,8 @@ DMG_5x_sig %>% write.csv("data/WGBS/DMG_5x_sig_methgroup.csv")
 
 
 ```{r}
+load("data/WGBS/meth_table5x_filtered.RData")
+
 meth_table5x_filtered <- meth_table5x_filtered %>% 
   mutate(loci_status = case_when(
           per.meth <= 10 ~ "unmethylated",
@@ -342,7 +353,7 @@ meth_table5x_filtered_sigDMG <- meth_table5x_filtered[meth_table5x_filtered$gene
 
 #### GENERAL HISTOGRAM OF CPG LOCI METHYLATION LEVEL 
 ## hist for per.meth distribution for all genes
-histall <- meth_table5x_filtered %>%
+meth_table5x_filtered %>%
   ggplot(aes(x=per.meth, fill=meth_exp_group)) + theme_bw() +
   facet_grid(factor(loci_status, levels=c('unmethylated','sparsely methylated','methylated'))~meth_exp_group, scales="free") +
   geom_histogram(alpha=0.6, position = 'identity') +
@@ -352,7 +363,7 @@ histall <- meth_table5x_filtered %>%
         strip.text.y = element_text(size = 12, color = "black", face = "bold")) +
   theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
 
-ggsave(filename="data/figures/Loci_Percent_methylation_all.jpeg", width=8, height=7, units="in")
+ggsave(filename="data/figures/Supplemental Figure 3 Loci_Percent_methylation_all.jpeg", width=8, height=7, units="in")
 
 ## hist for per.meth distribution for significant DMGs 
 histDMG <- meth_table5x_filtered_sigDMG %>%
@@ -365,7 +376,7 @@ histDMG <- meth_table5x_filtered_sigDMG %>%
         strip.text.y = element_text(size = 12, color = "black", face = "bold")) +
   theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
 
-ggsave(filename="data/figures/Loci_Percent_methylation_sigDMGs.jpeg", width=8, height=7, units="in")
+ggsave(filename="data/figures/Supplemental Figure 3 Loci_Percent_methylation_sigDMGs.jpeg", width=8, height=7, units="in")
 
 ##### without unmethylated 
 histun <- meth_table5x_filtered %>%
@@ -379,7 +390,7 @@ histun <- meth_table5x_filtered %>%
         strip.text.y = element_text(size = 12, color = "black", face = "bold")) +
   theme(strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"))
 
-ggsave(filename="data/figures/Loci_Percent_methylation_filtered.jpeg", width=6, height=3, units="in")
+ggsave(filename="data/figures/Supplemental Figure 3 Loci_Percent_methylation_filtered.jpeg", width=6, height=3, units="in")
 ```
 
 ### Filtering out loci with zero's 

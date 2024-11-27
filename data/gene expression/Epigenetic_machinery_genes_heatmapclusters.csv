@@ -1,0 +1,135 @@
+"gene","cluster","Description","ontology","slim_term","slim_cat","category","term","over_represented_pvalue","numDEInCat","numInCat","Cluster"
+"Pocillopora_acuta_HIv2___RNAseq.g18444.t1a",3,"Methyltransferase domain",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g12667.t2",1,"Histone-lysine N-methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g11678.t1",3,"DNA methyltransferase 2",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g3572.t1",4,"Catalyzes the formation of S-adenosylmethionine from methionine and ATP",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g29423.t1",1,"WD40 repeats",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g3475.t1",1,"Methyltransferase domain",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g11591.t1a",4,"Methyltransferase domain",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g12531.t1",3,"rRNA (pseudouridine) methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g28106.t1b",4,"protein deacetylase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g24008.t1",1,"betaine-homocysteine S-methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g21187.t1",3,"histone demethylase activity (H3-monomethyl-K4 specific)",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g30312.t1",1,"rRNA (cytosine-C5-)-methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g22191.t1",1,"tRNA (uracil) methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g5999.t1",2,"histone deacetylase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g606.t1",4,"methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g7346.t1",3,"methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g28867.t2",1,"Arsenite methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g12019.t1",2,"S-adenosylmethionine-dependent tRNA (m5U54) methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g4917.t1",4,"Belongs to the class I-like SAM-binding methyltransferase superfamily. mRNA cap 0 methyltransferase family",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g29016.t1",4,"histone methyltransferase binding",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g9274.t1",3,"Methyltransferase domain",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g1081.t1",1,"Histone-lysine N-methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g29397.t1",4,"Histone-lysine N-methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g6001.t1",2,"histone deacetylase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g28661.t1",4,"carnosine N-methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g12122.t1",1,"Catalyzes the formation of S-adenosylmethionine from methionine and ATP",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g7174.t1",4,"lysine N-methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g26976.t1a",2,"rRNA (cytosine-N4-)-methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g6220.t2",1,"Methyltransferase-like protein 22",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g9332.t1b",3,"Methyltransferase domain",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g18484.t1",4,"Bifunctional lysine-specific demethylase and histidyl-hydroxylase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g21126.t2",4,"protein-arginine omega-N symmetric methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g24428.t1",3,"methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.18068_t",2,"betaine--homocysteine S-methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g16947.t2",4,"tRNA methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g22195.t1",1,"tRNA (uracil) methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g19752.t2",4,"Methyltransferase like 2A",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g20415.t1",1,"histone demethylase activity (H3-monomethyl-K4 specific)",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g29545.t1",3,"rRNA (uridine-2'-O-)-methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g23404.t1",3,"Methyltransferase domain",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g21493.t1",3,"aminomethyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g1054.t1",1,"Histone-lysine N-methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g223.t1",3,"Methyltransferase domain",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g27884.t1",4,"tRNA methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g4421.t1",2,"Histone-lysine N-methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g14064.t1",1,"WD40 repeats",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g3343.t1",1,"Polysaccharide deacetylase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g16888.t1a",1,"N-acetylglucosamine-6-phosphate deacetylase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","BP","anatomical structure development","GO:0048856","GO:0040027","negative regulation of vulval development",0.004137186,3,29,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","BP","anatomical structure development","GO:0048856","GO:0048581","negative regulation of post-embryonic development",0.047113475,3,67,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","BP","anatomical structure development","GO:0048856","GO:0061064","negative regulation of nematode larval development",0.032070085,3,57,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","BP","chromatin organization","GO:0006325","GO:0010452","histone H3-K36 methylation",0.00060697,3,16,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","BP","chromatin organization","GO:0006325","GO:0016571","histone methylation",0.04961381,3,68,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","BP","chromatin organization","GO:0006325","GO:0034968","histone lysine methylation",0.028476068,3,55,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","BP","chromatin organization","GO:0006325","GO:0051567","histone H3-K9 methylation",0.001283986,3,19,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","BP","chromatin organization","GO:0006325","GO:0061647","histone H3-K9 modification",0.002764393,3,24,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","BP","signaling","GO:0023052","GO:0030518","intracellular steroid hormone receptor signaling pathway",0.04994644,3,75,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","BP","signaling","GO:0023052","GO:0035076","ecdysone receptor-mediated signaling pathway",0.002307496,3,26,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","BP",NA,NA,"GO:0018022","peptidyl-lysine methylation",0.041249789,3,66,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","BP",NA,NA,"GO:0035075","response to ecdysone",0.009001981,3,39,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","BP",NA,NA,"GO:0036314","response to sterol",0.029839151,3,58,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","BP",NA,NA,"GO:0036315","cellular response to sterol",0.013303909,3,44,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","BP",NA,NA,"GO:0071390","cellular response to ecdysone",0.003737325,3,30,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","MF","catalytic activity","GO:0003824","GO:0008170","N-methyltransferase activity",0.040226232,3,67,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","MF","catalytic activity","GO:0003824","GO:0008276","protein methyltransferase activity",0.047706508,3,72,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","MF","catalytic activity","GO:0003824","GO:0016278","lysine N-methyltransferase activity",0.011867153,3,43,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","MF","catalytic activity","GO:0003824","GO:0016279","protein-lysine N-methyltransferase activity",0.011270756,3,42,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","MF","catalytic activity","GO:0003824","GO:0018024","histone-lysine N-methyltransferase activity",0.00500053,3,30,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","MF","catalytic activity","GO:0003824","GO:0042054","histone methyltransferase activity",0.012533447,3,41,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","MF","catalytic activity","GO:0003824","GO:0046975","histone methyltransferase activity (H3-K36 specific)",0.00060697,3,16,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1047.t1",1,"Histone-lysine N-methyltransferase","MF",NA,NA,"GO:0051219","phosphoprotein binding",0.040439647,3,65,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g599.t1",3,"methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g9121.t1",2,"tRNA (guanine(9)-N(1))-methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g2780.t1",1,"tRNA methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g26344.t1",1,"o-methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g12376.t1",1,"Polysaccharide deacetylase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g20157.t1",2,"S-adenosylmethionine-dependent tRNA (m5U54) methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g4427.t1",2,"Histone-lysine N-methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g26404.t1",1,"methyltransferase involved in the processing of the 34S pre-rRNA to 18S rRNA and in 40S ribosomal subunit formation",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g26653.t2b",4,"Belongs to the class I-like SAM-binding methyltransferase superfamily. Protein arginine N- methyltransferase family",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g8105.t1",1,"NAD-dependent lysine demalonylase, desuccinylase and deglutarylase that specifically removes malonyl, succinyl and glutaryl groups on target proteins. Activates CPS1 and contributes to the regulation of blood ammonia levels during prolonged fasting acts by mediating desuccinylation and deglutarylation of CPS1, thereby increasing CPS1 activity in response to elevated NAD levels during fasting. Activates SOD1 by mediating its desuccinylation, leading to reduced reactive oxygen species. Modulates ketogenesis through the desuccinylation and activation of HMGCS2. Has weak NAD-dependent protein deacetylase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g11946.t1",1,"23S rRNA (adenine(1618)-N(6))-methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g9275.t1",3,"Methyltransferase domain",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g13579.t1",4,"Thiopurine S-methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g26689.t1",4,"5,10-methylenetetrahydrofolate-dependent methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g22703.t1",4,"WD40 repeats",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g22814.t1",3,"SAM dependent carboxyl methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g17738.t1",2,"Thiopurine S-methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g26154.t1",4,"PHD finger protein 14",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g27504.t1",1,"acetylserotonin O-methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g808.t1",1,"Belongs to the class I-like SAM-binding methyltransferase superfamily. gTMT family",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g28425.t1",1,"protein-arginine omega-N asymmetric methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g25168.t1c",2,"Methyltransferase domain",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP","DNA repair","GO:0006281","GO:0010569","regulation of double-strand break repair via homologous recombination",0.039747867,2,26,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP","anatomical structure development","GO:0048856","GO:0035441","cell migration involved in vasculogenesis",0.000888463,2,4,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP","anatomical structure development","GO:0048856","GO:0060039","pericardium development",0.047178158,2,28,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP","chromatin organization","GO:0006325","GO:0097198","histone H3-K36 trimethylation",0.000417771,2,3,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP","chromatin organization","GO:0006325","GO:0097676","histone H3-K36 dimethylation",0.001046218,2,5,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP","immune system process","GO:0002376","GO:0034340","response to type I interferon",0.006709808,2,11,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP","nucleocytoplasmic transport","GO:0006913","GO:0010793","regulation of mRNA export from nucleus",0.004481603,2,8,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP","nucleocytoplasmic transport","GO:0006913","GO:0046831","regulation of RNA export from nucleus",0.023324282,2,19,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP","transcription, DNA-templated","GO:0006351","GO:0006354","DNA-templated transcription, elongation",0.036959871,3,69,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP","transcription, DNA-templated","GO:0006351","GO:0006368","transcription elongation from RNA polymerase II promoter",0.036959871,3,69,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP",NA,NA,"GO:0018023","peptidyl-lysine trimethylation",0.026847367,2,22,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP",NA,NA,"GO:0018026","peptidyl-lysine monomethylation",0.003106014,2,7,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP",NA,NA,"GO:0018027","peptidyl-lysine dimethylation",0.008131733,2,12,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP",NA,NA,"GO:0032239","regulation of nucleobase-containing compound transport",0.030501902,2,22,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP",NA,NA,"GO:0032647","regulation of interferon-alpha production",0.01865939,2,16,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP",NA,NA,"GO:0032727","positive regulation of interferon-alpha production",0.014368017,2,14,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP",NA,NA,"GO:1905634","regulation of protein localization to chromatin",0.004146113,2,8,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","BP",NA,NA,"GO:2000197","regulation of ribonucleoprotein complex localization",0.007143193,2,10,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g1038.t1",1,"Histone-lysine N-methyltransferase","MF","cytoskeletal protein binding","GO:0008092","GO:0043014","alpha-tubulin binding",0.029252981,2,23,"Up in Triploids"
+"Pocillopora_acuta_HIv2___TS.g28047.t1a",1,"Histone-lysine N-methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g8931.t1",2,"Specifically binds 5-hydroxymethylcytosine (5hmC)- containing DNA in stem cells, suggesting that it acts as a specific reader of 5hmC in stem cells. May act as a peptidase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g9586.t1",1,"PHD finger protein 10",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g28049.t1",1,"Histone-lysine N-methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g964.t1",3,"Homocysteine S-methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g5689.t1",1,"Belongs to the class I-like SAM-binding methyltransferase superfamily. RsmB NOP family",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g3568.t1",4,"Catalyzes the formation of S-adenosylmethionine from methionine and ATP","BP","sulfur compound metabolic process","GO:0006790","GO:0009087","methionine catabolic process",0.048402933,1,4,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g3568.t1",4,"Catalyzes the formation of S-adenosylmethionine from methionine and ATP","MF","catalytic activity","GO:0003824","GO:0004478","methionine adenosyltransferase activity",0.048402933,1,4,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g3568.t1",4,"Catalyzes the formation of S-adenosylmethionine from methionine and ATP","MF","catalytic activity","GO:0003824","GO:0098601","selenomethionine adenosyltransferase activity",0.048402933,1,4,"Up in Triploids"
+"Pocillopora_acuta_HIv2___RNAseq.g3568.t1",4,"Catalyzes the formation of S-adenosylmethionine from methionine and ATP","BP","sulfur compound metabolic process","GO:0006790","GO:0006556","S-adenosylmethionine biosynthetic process",0.047934647,1,5,"Down in Group3 v Group2"
+"Pocillopora_acuta_HIv2___RNAseq.g3568.t1",4,"Catalyzes the formation of S-adenosylmethionine from methionine and ATP","BP","sulfur compound metabolic process","GO:0006790","GO:0009087","methionine catabolic process",0.039788928,1,4,"Down in Group3 v Group2"
+"Pocillopora_acuta_HIv2___RNAseq.g3568.t1",4,"Catalyzes the formation of S-adenosylmethionine from methionine and ATP","MF","catalytic activity","GO:0003824","GO:0004478","methionine adenosyltransferase activity",0.039788928,1,4,"Down in Group3 v Group2"
+"Pocillopora_acuta_HIv2___RNAseq.g3568.t1",4,"Catalyzes the formation of S-adenosylmethionine from methionine and ATP","MF","catalytic activity","GO:0003824","GO:0098601","selenomethionine adenosyltransferase activity",0.039788928,1,4,"Down in Group3 v Group2"
+"Pocillopora_acuta_HIv2___RNAseq.g14189.t1a",1,"histone demethylase activity (H3-K4 specific)",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g18721.t1",1,"DNA (cytosine-5-)-methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g1049.t1",1,"Histone-lysine N-methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g11863.t1",1,"protein-arginine omega-N symmetric methyltransferase activity",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g1078.t1",1,"Histone-lysine N-methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g6072.t1b",1,"PHD finger protein 3",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g7609.t1",1,"NAD-dependent histone deacetylase activity (H4-K16 specific)",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___RNAseq.g5064.t1",2,"such methylation being required for the assembly and biogenesis of snRNP core particles. Specifically mediates the symmetric dimethylation of histone H4 'Arg-3' to form H4R3me2s. Plays a role in gene imprinting by being recruited by CTCFL at the H19 imprinted control region (ICR) and methylating histone H4 to form H4R3me2s, possibly leading to recruit DNA methyltransferases at these sites. May also play a role in embryonic stem cell (ESC) pluripotency. Also able to mediate the arginine methylation of histone H2A and myelin basic protein (MBP) in vitro",NA,NA,NA,NA,NA,NA,NA,NA,NA
+"Pocillopora_acuta_HIv2___TS.g4426.t1",1,"Histone-lysine N-methyltransferase",NA,NA,NA,NA,NA,NA,NA,NA,NA
