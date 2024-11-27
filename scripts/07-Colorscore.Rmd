@@ -1,6 +1,6 @@
 ---
 title: "Color Score"
-author: "Author: Emma Strand; emma_strand@uri.edu"
+author: "Author: Emma Strand; emma.strand@gmgi.org"
 output:
   github_document: default
   pdf_document:
@@ -12,10 +12,6 @@ output:
 editor_options: 
   chunk_output_type: inline
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 ## Load libraries 
 
@@ -56,23 +52,10 @@ raw %>%
   geom_line(data=stats, aes(group = Treatment), size=0.3) +
   facet_grid(~Species, scales = "free")
 
-mcap_raw <- raw %>% subset(Species == "Mcapitata")
-mcap_stats <- stats %>% subset(Species == "Mcapitata")
 pacuta_raw <- raw %>% subset(Species == "Pacuta")
 pacuta_stats <- stats %>% subset(Species == "Pacuta")
 
-mcap_plot <- mcap_raw %>%
-  ggplot(., aes(x=Date, y=ColorScore, color=Treatment)) +
-  theme_classic() + xlab("") + ylab("") +
-  theme(legend.position="none") +
-  scale_color_manual(values = c("blue", "lightblue", "salmon", "red3")) +
-  geom_errorbar(data = mcap_stats, aes(ymin=ColorScore-se, ymax=ColorScore+se), size=0.5, width=.1) +
-  geom_line(data=mcap_stats, aes(group = Treatment), size=0.5) +
-  geom_jitter(alpha=0.25, size=2.5, width = 0.22) + 
-  ylim(-100,20) +
-  geom_point(data = mcap_stats, aes(x=Date, y=ColorScore), size=4); mcap_plot
-
-pacuta_plot <- pacuta_raw %>%
+pacuta_raw %>%
   ggplot(., aes(x=Date, y=ColorScore, color=Treatment)) +
   theme_classic() + xlab("") + ylab("") +
   theme(legend.position="none") +
@@ -81,75 +64,74 @@ pacuta_plot <- pacuta_raw %>%
   geom_errorbar(data = pacuta_stats, aes(ymin=ColorScore-se, ymax=ColorScore+se), size=0.5, width=.1) +
   geom_line(data=pacuta_stats, aes(group = Treatment), size=0.5) +
   geom_jitter(alpha=0.25, size=2.5, width = 0.22) + 
-  geom_point(data = pacuta_stats, aes(x=Date, y=ColorScore), size=4); pacuta_plot
+  geom_point(data = pacuta_stats, aes(x=Date, y=ColorScore), size=4) 
 
-ggsave(file="output/Color_Pacuta.png", pacuta_plot, width = 7, height = 5, units = c("in"))
-ggsave(file="output/Color_Mcap.png", mcap_plot, width = 7, height = 5, units = c("in"))
+ggsave(file="data/figures/Figure 1 Color_Pacuta.png", width = 7, height = 5, units = c("in")) 
 ```
 
 ## Ploidy 
 
 ```{r}
-## pca_data_all info from DMG-Pacuta
-ploidy_meta <- pca_data_all %>% dplyr::select(Sample.ID, meth_exp_group) %>% 
-  distinct() %>% dplyr::rename(Plug_ID = Sample.ID)
-  
-pacuta_raw %>% 
-  left_join(., ploidy_meta, by=c("Plug_ID")) %>%
-    filter(!meth_exp_group == "ungroup") %>%
-  ggplot(., aes(x=Date, y=ColorScore, color=Treatment)) +
-  theme_classic() + xlab("") + ylab("") +
-  scale_shape_manual(values = c(1,2,17)) +
-  theme(legend.position="none") +
-  ylim(-100,20) +
-  scale_color_manual(values = c("blue", "lightblue", "salmon", "red3")) +
-  geom_errorbar(data = pacuta_stats, aes(ymin=ColorScore-se, ymax=ColorScore+se), size=0.5, width=.1) +
-  geom_line(data=pacuta_stats, aes(group = Treatment), size=0.5) +
-  geom_jitter(alpha=0.5, size=3, width = 0.22, aes(shape=meth_exp_group)) + 
-  geom_point(data = pacuta_stats, aes(x=Date, y=ColorScore), size=2)
-
-pacuta_raw %>%
-  left_join(., ploidy_meta, by=c("Plug_ID")) %>%
-  filter(!meth_exp_group == "ungroup") %>%
-  ggplot(., aes(x=meth_exp_group, y=ColorScore, color=meth_exp_group, shape=meth_exp_group)) +
-  geom_boxplot() + 
-  geom_jitter(alpha=0.7, size=4, width = 0.15) + theme_classic() + 
-  scale_shape_manual(values=c(1, 2, 17)) +
-  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) 
-
-stats2 <- pacuta_raw %>% 
-  left_join(., ploidy_meta, by=c("Plug_ID")) %>%
-    filter(!meth_exp_group == "ungroup")
-
-summary(aov(ColorScore ~ meth_exp_group, data=stats2))
-
-pacuta_raw$Color.Transformed <- pacuta_raw$ColorScore+100
-range(pacuta_raw$Color.Transformed)
-hist(pacuta_raw$Color.Transformed)
-
-pacuta_raw2 <- pacuta_raw %>%
-  mutate(Temperature = 
-           case_when(
-             Treatment == "ATAC" ~ "Ambient",
-             Treatment == "ATHC" ~ "Ambient",
-             Treatment == "HTAC" ~ "High",
-             Treatment == "HTHC" ~ "High"
-           )) %>%
-  mutate(CO2 = 
-           case_when(
-             Treatment == "ATAC" ~ "Ambient",
-             Treatment == "ATHC" ~ "High",
-             Treatment == "HTAC" ~ "Ambient",
-             Treatment == "HTHC" ~ "High"
-           ))
-
-stats3 <- lm(log10(Color.Transformed) ~ Timepoint*Temperature*CO2, 
-               na.action=na.omit, data=pacuta_raw2)
-
-qqPlot(residuals(stats3)) 
-hist(residuals(stats3))
-
-stats3.anova <- Anova(stats3, ddf="lme4", type='III')
+# ## pca_data_all info from DMG-Pacuta
+# ploidy_meta <- pca_data_all %>% dplyr::select(Sample.ID, meth_exp_group) %>% 
+#   distinct() %>% dplyr::rename(Plug_ID = Sample.ID)
+#   
+# pacuta_raw %>% 
+#   left_join(., ploidy_meta, by=c("Plug_ID")) %>%
+#     filter(!meth_exp_group == "ungroup") %>%
+#   ggplot(., aes(x=Date, y=ColorScore, color=Treatment)) +
+#   theme_classic() + xlab("") + ylab("") +
+#   scale_shape_manual(values = c(1,2,17)) +
+#   theme(legend.position="none") +
+#   ylim(-100,20) +
+#   scale_color_manual(values = c("blue", "lightblue", "salmon", "red3")) +
+#   geom_errorbar(data = pacuta_stats, aes(ymin=ColorScore-se, ymax=ColorScore+se), size=0.5, width=.1) +
+#   geom_line(data=pacuta_stats, aes(group = Treatment), size=0.5) +
+#   geom_jitter(alpha=0.5, size=3, width = 0.22, aes(shape=meth_exp_group)) + 
+#   geom_point(data = pacuta_stats, aes(x=Date, y=ColorScore), size=2)
+# 
+# pacuta_raw %>%
+#   left_join(., ploidy_meta, by=c("Plug_ID")) %>%
+#   filter(!meth_exp_group == "ungroup") %>%
+#   ggplot(., aes(x=meth_exp_group, y=ColorScore, color=meth_exp_group, shape=meth_exp_group)) +
+#   geom_boxplot() + 
+#   geom_jitter(alpha=0.7, size=4, width = 0.15) + theme_classic() + 
+#   scale_shape_manual(values=c(1, 2, 17)) +
+#   scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) 
+# 
+# stats2 <- pacuta_raw %>% 
+#   left_join(., ploidy_meta, by=c("Plug_ID")) %>%
+#     filter(!meth_exp_group == "ungroup")
+# 
+# summary(aov(ColorScore ~ meth_exp_group, data=stats2))
+# 
+# pacuta_raw$Color.Transformed <- pacuta_raw$ColorScore+100
+# range(pacuta_raw$Color.Transformed)
+# hist(pacuta_raw$Color.Transformed)
+# 
+# pacuta_raw2 <- pacuta_raw %>%
+#   mutate(Temperature = 
+#            case_when(
+#              Treatment == "ATAC" ~ "Ambient",
+#              Treatment == "ATHC" ~ "Ambient",
+#              Treatment == "HTAC" ~ "High",
+#              Treatment == "HTHC" ~ "High"
+#            )) %>%
+#   mutate(CO2 = 
+#            case_when(
+#              Treatment == "ATAC" ~ "Ambient",
+#              Treatment == "ATHC" ~ "High",
+#              Treatment == "HTAC" ~ "Ambient",
+#              Treatment == "HTHC" ~ "High"
+#            ))
+# 
+# stats3 <- lm(log10(Color.Transformed) ~ Timepoint*Temperature*CO2, 
+#                na.action=na.omit, data=pacuta_raw2)
+# 
+# qqPlot(residuals(stats3)) 
+# hist(residuals(stats3))
+# 
+# stats3.anova <- Anova(stats3, ddf="lme4", type='III')
 ```
 
 
