@@ -279,6 +279,54 @@ comparison_summary2 %>%
 ggsave("data/figures/Fig4A_Methylation_CV.png", width = 5.5, height = 4.5)
 ```
 
+Gene expression vs. inv CV
+
+```{r}
+### statistic
+comparison_summary2$meth_exp_group <- as.factor(comparison_summary2$meth_exp_group)
+ANOVA <- aov(inv_CV ~ meth_exp_group*count, data = comparison_summary2)
+summary(ANOVA)
+summary(glht(ANOVA, linfct = mcp(meth_exp_group = "Tukey")))
+
+lm_model <- lm(inv_CV ~ meth_exp_group+count, data = comparison_summary2)
+summary(lm_model)
+
+### figure with stats
+comparison_summary2 %>%
+  ggplot(., aes(x=count, y=inv_CV, color=meth_exp_group)) + 
+  geom_point(alpha=0.2, size=0.75) + 
+
+  labs(
+    y = "Gene expression (CV-1)",
+    x = "Gene expression (counts)"
+  )+
+  
+  stat_poly_line(linewidth=1) +
+  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+  stat_poly_eq(vjust=0.1, hjust=0.2) +
+  
+  # Add y-axis buffer of 0.2
+  # scale_y_continuous(limits = c(min(comparison_summary2$CV) - min(comparison_summary2$CV)*0.01,
+  #                                max(comparison_summary2$CV) + max(comparison_summary2$CV)*0.02)) +
+  
+  ggtitle(
+    label = paste0("ANOVA count p<0.0001; ploidy; p<0.0001; count x ploidy p=0.048")
+    #subtitle = paste0("TUKEY POST-HOC ploidy no significance")
+  ) +
+  
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.text.y = element_text(size=10, color="black"),
+        axis.text.x = element_text(size=10, color="black"),
+        plot.title = element_text(size=10, color="grey55", face = "italic"),
+        plot.subtitle = element_text(size=10, color="grey55", face = "italic"),
+        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0), size=11, face="bold"),
+        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0), size=11, face="bold")
+  )
+
+ggsave("data/figures/Supplemental Figure 5 Expression_CV.png", width = 5.5, height = 4.5)
+```
+
 
 ## Targeted Epigenetic machinery gene expression 
 

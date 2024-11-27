@@ -90,7 +90,7 @@ gene.stats.DMGs <- meth_table5x_filtered2_sigDMG %>%
   mutate(median.sample = median(median.gene),
          mean.sample = mean(mean.gene)) %>% ungroup()
 
-gene.stats.DMGs %>% write.csv("data/WGBS/DMG_statistics.csv", row.names = FALSE)
+#gene.stats.DMGs %>% write.csv("data/WGBS/DMG_statistics.csv", row.names = FALSE)
   
 fig2C <- gene.stats.DMGs %>% 
   subset(!meth_exp_group == "ungroup") %>%
