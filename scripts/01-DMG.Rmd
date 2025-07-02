@@ -137,16 +137,33 @@ df5x %>%
 
 ## Binomial GLM to test for differentially methylated genes
 
-Filtering to loci that have a median methylation level of >0% and filtering out genes that have less than 5 methylation loci 
+Filtering to genes that have at least 6 CpG loci in the dataset with 5X coverage 
+
+Genes before >5 loci filtering: 14,532 genes    
+Genes after >5 loci filtering: 9,647 genes 
 
 ```{r}
+### Number of genes before filtering
+length(unique(df5x$gene)) ## 14,532 genes
+
+### Filtering
 meth_table5x <- df5x
 meth_table5x$sample_gene <- paste0(meth_table5x$Sample.ID, meth_table5x$gene)
 meth_table5x_position_counts <- dplyr::count(meth_table5x, vars = c(sample_gene))
+
 meth_table5x_position_counts <- meth_table5x_position_counts[which(meth_table5x_position_counts$n > 5), ]
 
 meth_table5x_filtered <- meth_table5x[meth_table5x$sample_gene %in% meth_table5x_position_counts$vars,]
 
+### Number of genes after filtering
+length(unique(meth_table5x_filtered$gene))
+```
+
+Testing filtering by CpG loci median methylation %. Commented out so the 9,467 genes are carried through to DMG analysis
+
+*Testing purposes, not used..* 
+
+```{r}
 # df_filtered  <- df5x %>%
 #   #### [11,283,247 × 20] at this point
 #   unite(Loc, scaffold, position, remove = FALSE, sep = " ") %>%
@@ -170,11 +187,10 @@ meth_table5x_filtered <- meth_table5x[meth_table5x$sample_gene %in% meth_table5x
 # length(unique(df_filtered$gene))
 # ## 4,098 genes with median >0 
 # ## 359 genes 
-```
 
-Filtering to loci that have a median methylation level of >0% and filtering out genes that have less than 5 methylation loci 
+#####################
 
-```{r}
+
 # df_filtered_posONLY  <- df5x %>%
 #   #### [11,283,247 × 20] at this point
 #   unite(Loc, scaffold, position, remove = FALSE, sep = " ") %>%
@@ -194,6 +210,8 @@ Filtering to loci that have a median methylation level of >0% and filtering out 
 ### Run loop for GLM 
 
 Binomial GLM to test for differentially methylated genes. For 359 genes this took ~1 min. 
+
+*Testing purposes, not used..* 
 
 ```{r}
 # ## DELETE OLD VERSIONS OF THIS FILE BEFORE RUNNING
@@ -236,6 +254,8 @@ Binomial GLM to test for differentially methylated genes. For 359 genes this too
 ```
 
 Binomial GLM to test for differentially methylated genes. For 7,413 genes this took ~10 minutes. 
+
+*Testing purposes, not used..* 
 
 ```{r}
 # ## DELETE OLD VERSIONS OF THIS FILE BEFORE RUNNING
@@ -280,12 +300,16 @@ Binomial GLM to test for differentially methylated genes. For 7,413 genes this t
 
 Reading in those df so don't need to calculate every time 
 
+*Testing purposes, not used..* 
+
 ```{r}
 # results_filtered <- read.delim2("data/WGBS/GLM_output_methpos_filter.txt")
 # results_posonly_filtered <- read.delim2("data/WGBS/GLM_output_posFilter_only.txt")
 ```
 
 ## Calculating adjusted p-values for glm
+
+*Testing purposes, not used..* 
 
 ```{r}
 # ## adjusting p-values 
@@ -404,16 +428,55 @@ meth_table5x_filtered2 = 229,661 loci in 1,976 genes (4,503 loci per sample)
 meth_table5x_filtered2_sigDMG =  198,647 loci in 1,447 genes (3,895 loci per sample)
 
 ```{r}
-meth_table5x_filtered2 <- meth_table5x_filtered %>% group_by(position) %>%
-  mutate(position.median = median(per.meth)) %>%
-  filter(!position.median < 10) %>% ungroup()
+meth_table5x_filtered2 <- meth_table5x_filtered %>% distinct() %>%
+  unite(Loc, c("scaffold", "position"), sep = "_") %>%
+
+  ## option 1: >10% median CpG methylation
+  # group_by(Loc) %>%
+  # mutate(position.median = median(per.meth)) %>%
+  # filter(position.median > 10) %>% ungroup()
+
+  ## option 2: CpG loci >0% across all samples, but genes need 5 positions 
+  # group_by(Loc) %>%
+  # mutate(position.median = median(per.meth)) %>%
+  # filter(position.median > 0) %>% ungroup() %>%
+  # group_by(gene) %>%
+  # filter(n_distinct(Loc) >= 5)
+  
+  ## option 3: gene median >10% CpG across all samples
+  # group_by(gene) %>%
+  # mutate(gene.median = median(per.meth)) %>%
+  # filter(gene.median >= 10) %>% ungroup()
+  
+  ## option 4: gene median 0% CpG across all samples
+  group_by(gene) %>%
+  mutate(gene.median = median(per.meth)) %>%
+  filter(gene.median > 0) %>% ungroup()
+  
+
+## testing position vs Loc column, should be Loc
+# length(unique(meth_table5x_filtered$position)) ## 103,629
+# length(unique(meth_table5x_filtered2$Loc)) ## 104,388
 
 ## viewing one loci to see if the above function worked 
-meth_table5x_filtered2 %>% filter(position == "3396")
-meth_table5x_filtered %>% filter(position == "3396")
+# meth_table5x_filtered2 %>% filter(position == "3396")
+# meth_table5x_filtered %>% filter(position == "3396")
 
 meth_table5x_filtered2_sigDMG <- meth_table5x_filtered2[meth_table5x_filtered2$gene %in% DMG_5x_sig$gene,]
-length(unique(meth_table5x_filtered2_sigDMG$gene)) ##1,447 genes left 
+
+length(unique(meth_table5x_filtered2$gene)) 
+## total = 9,647
+## option 1: 1,761 genes if CpG loci > 10
+## option 2: 345 genes if CpG loci > 0 then at least 5 CpG positions per gene
+## option 3: 577 if gene median >10% CpG across all samples
+## option 4: 808 if gene median >0% CpG across all samples
+
+length(unique(meth_table5x_filtered2_sigDMG$gene)) 
+## total = 3,870 
+## option 1: 1,429 genes if CpG loci > 10 DMGS
+## option 2: 320 if CpG loci > 0 then at least 5 CpG positions per gene
+## option 3: 504 if gene median >10% CpG across all samples
+## option 4: 714 if gene median 0% CpG across all samples
 
 save(meth_table5x_filtered_sigDMG, file = "data/WGBS/meth_table5x_filtered_sigDMG.RData")
 save(meth_table5x_filtered, file = "data/WGBS/meth_table5x_filtered.RData")

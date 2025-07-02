@@ -127,17 +127,41 @@ df5x %>%
 
 ## Binomial GLM to test for differentially methylated genes
 
-Filtering to loci that have a median methylation level of \>0% and
-filtering out genes that have less than 5 methylation loci
+Filtering to genes that have at least 6 CpG loci in the dataset with 5X
+coverage
+
+Genes before \>5 loci filtering: 14,532 genes  
+Genes after \>5 loci filtering: 9,647 genes
 
 ``` r
+### Number of genes before filtering
+length(unique(df5x$gene)) ## 14,532 genes
+```
+
+    ## [1] 14532
+
+``` r
+### Filtering
 meth_table5x <- df5x
 meth_table5x$sample_gene <- paste0(meth_table5x$Sample.ID, meth_table5x$gene)
 meth_table5x_position_counts <- dplyr::count(meth_table5x, vars = c(sample_gene))
+
 meth_table5x_position_counts <- meth_table5x_position_counts[which(meth_table5x_position_counts$n > 5), ]
 
 meth_table5x_filtered <- meth_table5x[meth_table5x$sample_gene %in% meth_table5x_position_counts$vars,]
 
+### Number of genes after filtering
+length(unique(meth_table5x_filtered$gene))
+```
+
+    ## [1] 9647
+
+Testing filtering by CpG loci median methylation %. Commented out so the
+9,467 genes are carried through to DMG analysis
+
+*Testing purposes, not used..*
+
+``` r
 # df_filtered  <- df5x %>%
 #   #### [11,283,247 × 20] at this point
 #   unite(Loc, scaffold, position, remove = FALSE, sep = " ") %>%
@@ -161,12 +185,10 @@ meth_table5x_filtered <- meth_table5x[meth_table5x$sample_gene %in% meth_table5x
 # length(unique(df_filtered$gene))
 # ## 4,098 genes with median >0 
 # ## 359 genes 
-```
 
-Filtering to loci that have a median methylation level of \>0% and
-filtering out genes that have less than 5 methylation loci
+#####################
 
-``` r
+
 # df_filtered_posONLY  <- df5x %>%
 #   #### [11,283,247 × 20] at this point
 #   unite(Loc, scaffold, position, remove = FALSE, sep = " ") %>%
@@ -187,6 +209,8 @@ filtering out genes that have less than 5 methylation loci
 
 Binomial GLM to test for differentially methylated genes. For 359 genes
 this took ~1 min.
+
+*Testing purposes, not used..*
 
 ``` r
 # ## DELETE OLD VERSIONS OF THIS FILE BEFORE RUNNING
@@ -231,6 +255,8 @@ this took ~1 min.
 Binomial GLM to test for differentially methylated genes. For 7,413
 genes this took ~10 minutes.
 
+*Testing purposes, not used..*
+
 ``` r
 # ## DELETE OLD VERSIONS OF THIS FILE BEFORE RUNNING
 # unlink("data/WGBS/GLM_output_posFilter_only.txt")
@@ -274,12 +300,16 @@ genes this took ~10 minutes.
 
 Reading in those df so don’t need to calculate every time
 
+*Testing purposes, not used..*
+
 ``` r
 # results_filtered <- read.delim2("data/WGBS/GLM_output_methpos_filter.txt")
 # results_posonly_filtered <- read.delim2("data/WGBS/GLM_output_posFilter_only.txt")
 ```
 
 ## Calculating adjusted p-values for glm
+
+*Testing purposes, not used..*
 
 ``` r
 # ## adjusting p-values 
@@ -439,243 +469,66 @@ sample) meth_table5x_filtered2_sigDMG = 198,647 loci in 1,447 genes
 (3,895 loci per sample)
 
 ``` r
-meth_table5x_filtered2 <- meth_table5x_filtered %>% group_by(position) %>%
-  mutate(position.median = median(per.meth)) %>%
-  filter(!position.median < 10) %>% ungroup()
+meth_table5x_filtered2 <- meth_table5x_filtered %>% distinct() %>%
+  unite(Loc, c("scaffold", "position"), sep = "_") %>%
+
+  ## option 1: >10% median CpG methylation
+  # group_by(Loc) %>%
+  # mutate(position.median = median(per.meth)) %>%
+  # filter(position.median > 10) %>% ungroup()
+
+  ## option 2: CpG loci >0% across all samples, but genes need 5 positions 
+  # group_by(Loc) %>%
+  # mutate(position.median = median(per.meth)) %>%
+  # filter(position.median > 0) %>% ungroup() %>%
+  # group_by(gene) %>%
+  # filter(n_distinct(Loc) >= 5)
+  
+  ## option 3: gene median >10% CpG across all samples
+  # group_by(gene) %>%
+  # mutate(gene.median = median(per.meth)) %>%
+  # filter(gene.median >= 10) %>% ungroup()
+  
+  ## option 4: gene median 0% CpG across all samples
+  group_by(gene) %>%
+  mutate(gene.median = median(per.meth)) %>%
+  filter(gene.median > 0) %>% ungroup()
+  
+
+## testing position vs Loc column, should be Loc
+# length(unique(meth_table5x_filtered$position)) ## 103,629
+# length(unique(meth_table5x_filtered2$Loc)) ## 104,388
 
 ## viewing one loci to see if the above function worked 
-meth_table5x_filtered2 %>% filter(position == "3396")
-```
+# meth_table5x_filtered2 %>% filter(position == "3396")
+# meth_table5x_filtered %>% filter(position == "3396")
 
-    ## # A tibble: 0 × 22
-    ## # ℹ 22 variables: Sample.ID <chr>, scaffold <chr>, position <int>,
-    ## #   per.meth <dbl>, meth <int>, unmeth <int>, gene <chr>, Species <chr>,
-    ## #   Tank <int>, Treatment <chr>, Temperature <chr>, CO2 <chr>, Timepoint <fct>,
-    ## #   Sample.Date <int>, ploidy <chr>, group <chr>, treesplit <chr>, Clade <chr>,
-    ## #   meth_exp_group <chr>, sample_gene <chr>, loci_status <chr>,
-    ## #   position.median <dbl>
-
-``` r
-meth_table5x_filtered %>% filter(position == "3396")
-```
-
-    ##    Sample.ID                           scaffold position per.meth meth unmeth
-    ## 1       1047 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0      9
-    ## 2       1051 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     20
-    ## 3       1090 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     26
-    ## 4       1103 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     11
-    ## 5       1147 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0      7
-    ## 6       1159 Pocillopora_acuta_HIv2___Sc0000000     3396 5.882353    1     16
-    ## 7       1168 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     23
-    ## 8       1184 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     19
-    ## 9       1238 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     12
-    ## 10      1281 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     30
-    ## 11      1296 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     24
-    ## 12      1303 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     24
-    ## 13      1329 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     26
-    ## 14      1416 Pocillopora_acuta_HIv2___Sc0000000     3396 3.333333    1     29
-    ## 15      1427 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     21
-    ## 16      1459 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     13
-    ## 17      1487 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     18
-    ## 18      1536 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     23
-    ## 19      1559 Pocillopora_acuta_HIv2___Sc0000000     3396 4.761905    1     20
-    ## 20      1563 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     28
-    ## 21      1571 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     20
-    ## 22      1582 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     18
-    ## 23      1596 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     30
-    ## 24      1641 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     25
-    ## 25      1647 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     11
-    ## 26      1707 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0      5
-    ## 27      1709 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     77
-    ## 28      1728 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     23
-    ## 29      1732 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     21
-    ## 30      1755 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     29
-    ## 31      1757 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     21
-    ## 32      1765 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     14
-    ## 33      1777 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0      8
-    ## 34      1820 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     23
-    ## 35      2012 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     24
-    ## 36      2064 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     17
-    ## 37      2072 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     12
-    ## 38      2087 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     25
-    ## 39      2212 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0      8
-    ## 40      2300 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     25
-    ## 41      2304 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     22
-    ## 42      2306 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     17
-    ## 43      2409 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     18
-    ## 44      2413 Pocillopora_acuta_HIv2___Sc0000000     3396 2.702703    1     36
-    ## 45      2513 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     27
-    ## 46      2564 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     17
-    ## 47      2668 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     17
-    ## 48      2861 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     20
-    ## 49      2877 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     13
-    ## 50      2878 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     35
-    ## 51      2879 Pocillopora_acuta_HIv2___Sc0000000     3396 0.000000    0     12
-    ##                                     gene Species Tank Treatment Temperature
-    ## 1  Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    1      ATAC     Ambient
-    ## 2  Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    1      ATAC     Ambient
-    ## 3  Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    2      HTHC        High
-    ## 4  Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    1      ATAC     Ambient
-    ## 5  Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    3      ATHC     Ambient
-    ## 6  Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    1      ATAC     Ambient
-    ## 7  Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    2      HTHC        High
-    ## 8  Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    2      HTHC        High
-    ## 9  Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    2      HTHC        High
-    ## 10 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    3      ATHC     Ambient
-    ## 11 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    3      ATHC     Ambient
-    ## 12 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    4      HTAC        High
-    ## 13 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    4      HTAC        High
-    ## 14 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    5      HTHC        High
-    ## 15 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    5      HTHC        High
-    ## 16 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    3      ATHC     Ambient
-    ## 17 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    7      HTAC        High
-    ## 18 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    7      HTAC        High
-    ## 19 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    8      ATAC     Ambient
-    ## 20 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    8      ATAC     Ambient
-    ## 21 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    7      HTAC        High
-    ## 22 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    9      HTAC        High
-    ## 23 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    4      HTAC        High
-    ## 24 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    6      ATAC     Ambient
-    ## 25 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    7      HTAC        High
-    ## 26 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    9      HTAC        High
-    ## 27 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta   10      HTHC        High
-    ## 28 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    4      HTAC        High
-    ## 29 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta   10      HTHC        High
-    ## 30 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    6      ATAC     Ambient
-    ## 31 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    6      ATAC     Ambient
-    ## 32 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    7      HTAC        High
-    ## 33 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    8      ATAC     Ambient
-    ## 34 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta   10      HTHC        High
-    ## 35 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    8      ATAC     Ambient
-    ## 36 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    9      HTAC        High
-    ## 37 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    9      HTAC        High
-    ## 38 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta   10      HTHC        High
-    ## 39 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta   11      ATHC     Ambient
-    ## 40 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    5      HTHC        High
-    ## 41 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    5      HTHC        High
-    ## 42 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    6      ATAC     Ambient
-    ## 43 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta   11      ATHC     Ambient
-    ## 44 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    8      ATAC     Ambient
-    ## 45 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta    9      HTAC        High
-    ## 46 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta   12      ATHC     Ambient
-    ## 47 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta   11      ATHC     Ambient
-    ## 48 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta   11      ATHC     Ambient
-    ## 49 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta   12      ATHC     Ambient
-    ## 50 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta   12      ATHC     Ambient
-    ## 51 Pocillopora_acuta_HIv2___TS.g10153.t1  Pacuta   12      ATHC     Ambient
-    ##        CO2 Timepoint Sample.Date   ploidy  group treesplit    Clade
-    ## 1  Ambient    2 week    20181006  Diploid Group6         D CladePA5
-    ## 2  Ambient    4 week    20181020 Triploid Group1        T1 CladePA2
-    ## 3     High    2 week    20181006 Triploid Group3        T2 CladePA3
-    ## 4  Ambient   12 week    20181215 Triploid Group2        T1 CladePA1
-    ## 5     High   12 week    20181215 Triploid Group2        T1 CladePA1
-    ## 6  Ambient    8 week    20181117  Diploid Group5      <NA> CladePA6
-    ## 7     High   30 hour    20180923  Diploid Group6         D CladePA5
-    ## 8     High    4 week    20181020 Triploid Group4        T2 CladePA4
-    ## 9     High    8 week    20181117 Triploid Group3        T2 CladePA3
-    ## 10    High    2 week    20181006  Diploid Group6         D CladePA5
-    ## 11    High   30 hour    20180923  Diploid Group6         D CladePA5
-    ## 12 Ambient   30 hour    20180923  Diploid Group6         D CladePA5
-    ## 13 Ambient    4 week    20181020  Diploid Group6         D CladePA5
-    ## 14    High   12 week    20181215  Diploid Group6         D CladePA5
-    ## 15    High    2 week    20181006 Triploid Group4        T2 CladePA4
-    ## 16    High    4 week    20181020 Triploid Group1        T1 CladePA2
-    ## 17 Ambient    2 week    20181006  Diploid Group6         D CladePA5
-    ## 18 Ambient    8 week    20181117 Triploid Group3        T2 CladePA3
-    ## 19 Ambient    8 week    20181117 Triploid Group3        T2 CladePA3
-    ## 20 Ambient   30 hour    20180923 Triploid Group3        T2 CladePA3
-    ## 21 Ambient   30 hour    20180923  Diploid Group6         D CladePA5
-    ## 22 Ambient   12 week    20181215 Triploid Group3        T2 CladePA3
-    ## 23 Ambient   12 week    20181215 Triploid Group2        T1 CladePA1
-    ## 24 Ambient    8 week    20181117 Triploid Group3        T2 CladePA3
-    ## 25 Ambient   12 week    20181215 Triploid Group3        T2 CladePA3
-    ## 26 Ambient   30 hour    20180923 Triploid Group2        T1 CladePA1
-    ## 27    High    4 week    20181020 Triploid Group2        T1 CladePA1
-    ## 28 Ambient    2 week    20181006 Triploid Group2        T1 CladePA1
-    ## 29    High    8 week    20181117 Triploid Group3        T2 CladePA3
-    ## 30 Ambient    4 week    20181020  Diploid Group5      <NA> CladePA6
-    ## 31 Ambient   30 hour    20180923 Triploid Group3        T2 CladePA3
-    ## 32 Ambient    4 week    20181020 Triploid Group3        T2 CladePA3
-    ## 33 Ambient   12 week    20181215 Triploid Group1        T1 CladePA2
-    ## 34    High    2 week    20181006 Triploid Group3        T2 CladePA3
-    ## 35 Ambient    4 week    20181020 Triploid Group2        T1 CladePA1
-    ## 36 Ambient    8 week    20181117 Triploid Group2        T1 CladePA1
-    ## 37 Ambient    2 week    20181006 Triploid Group1        T1 CladePA2
-    ## 38    High   30 hour    20180923 Triploid Group2        T1 CladePA1
-    ## 39    High   30 hour    20180923  Diploid Group5      <NA> CladePA6
-    ## 40    High    8 week    20181117 Triploid Group2        T1 CladePA1
-    ## 41    High    4 week    20181020 Triploid Group2        T1 CladePA1
-    ## 42 Ambient   12 week    20181215 Triploid Group2        T1 CladePA1
-    ## 43    High    2 week    20181006 Triploid Group3        T2 CladePA3
-    ## 44 Ambient    2 week    20181006 Triploid Group2        T1 CladePA1
-    ## 45 Ambient    4 week    20181020 Triploid Group2        T1 CladePA1
-    ## 46    High    4 week    20181020 Triploid Group3        T2 CladePA3
-    ## 47    High   12 week    20181215  Diploid Group6         D CladePA5
-    ## 48    High    4 week    20181020  Diploid Group6         D CladePA5
-    ## 49    High   30 hour    20180923 Triploid Group2        T1 CladePA1
-    ## 50    High    2 week    20181006 Triploid Group2        T1 CladePA1
-    ## 51    High   12 week    20181215  Diploid Group6         D CladePA5
-    ##    meth_exp_group                               sample_gene  loci_status
-    ## 1               D 1047Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 2              T1 1051Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 3              T2 1090Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 4              T1 1103Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 5              T1 1147Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 6               D 1159Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 7               D 1168Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 8              T2 1184Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 9              T2 1238Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 10              D 1281Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 11              D 1296Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 12              D 1303Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 13              D 1329Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 14              D 1416Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 15             T2 1427Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 16             T1 1459Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 17              D 1487Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 18             T2 1536Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 19             T2 1559Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 20             T2 1563Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 21              D 1571Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 22             T2 1582Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 23             T1 1596Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 24             T2 1641Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 25             T2 1647Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 26             T1 1707Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 27             T1 1709Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 28             T1 1728Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 29             T2 1732Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 30              D 1755Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 31             T2 1757Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 32             T2 1765Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 33             T1 1777Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 34             T2 1820Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 35             T1 2012Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 36             T1 2064Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 37             T1 2072Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 38             T1 2087Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 39              D 2212Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 40             T1 2300Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 41             T1 2304Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 42             T1 2306Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 43             T2 2409Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 44             T1 2413Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 45             T1 2513Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 46             T2 2564Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 47              D 2668Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 48              D 2861Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 49             T1 2877Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 50             T1 2878Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-    ## 51              D 2879Pocillopora_acuta_HIv2___TS.g10153.t1 unmethylated
-
-``` r
 meth_table5x_filtered2_sigDMG <- meth_table5x_filtered2[meth_table5x_filtered2$gene %in% DMG_5x_sig$gene,]
-length(unique(meth_table5x_filtered2_sigDMG$gene)) ##1,447 genes left 
+
+length(unique(meth_table5x_filtered2$gene)) 
 ```
 
-    ## [1] 1447
+    ## [1] 808
 
 ``` r
+## total = 9,647
+## option 1: 1,761 genes if CpG loci > 10
+## option 2: 345 genes if CpG loci > 0 then at least 5 CpG positions per gene
+## option 3: 577 if gene median >10% CpG across all samples
+## option 4: 808 if gene median >0% CpG across all samples
+
+length(unique(meth_table5x_filtered2_sigDMG$gene)) 
+```
+
+    ## [1] 714
+
+``` r
+## total = 3,870 
+## option 1: 1,429 genes if CpG loci > 10 DMGS
+## option 2: 320 if CpG loci > 0 then at least 5 CpG positions per gene
+## option 3: 504 if gene median >10% CpG across all samples
+## option 4: 714 if gene median 0% CpG across all samples
+
 save(meth_table5x_filtered_sigDMG, file = "data/WGBS/meth_table5x_filtered_sigDMG.RData")
 save(meth_table5x_filtered, file = "data/WGBS/meth_table5x_filtered.RData")
 save(meth_table5x_filtered2, file = "data/WGBS/meth_table5x_filtered2.RData")
