@@ -1,0 +1,11 @@
+Permutation test for adonis under reduced model
+Permutation: free
+Number of permutations: 9999
+
+adonis2(formula = vegan_sig ~ ploidy, data = pca_data_sig, permutations = 9999, method = "eu")
+         Df SumOfSqs      R2      F Pr(>F)    
+Model     1     8146 0.22817 14.485  1e-04 ***
+Residual 49    27554 0.77183                  
+Total    50    35700 1.00000                  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1

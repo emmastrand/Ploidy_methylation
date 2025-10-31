@@ -45,6 +45,7 @@ library(ggsignif)
 library(ggpubr)
 library(cowplot)
 library("ComplexHeatmap")
+library(patchwork)
 ```
 
 ## Load data 
@@ -54,25 +55,136 @@ library("ComplexHeatmap")
 load("data/WGBS/meth_table5x_filtered.RData")
 load("data/WGBS/meth_table5x_filtered_sigDMG.RData")
 
-## filtered2 = loci that have median methylation > 10%
-load("data/WGBS/meth_table5x_filtered2.RData")  
-load("data/WGBS/meth_table5x_filtered2_sigDMG.RData") 
+## filtered2 = loci that have median methylation > 0%
+load("data/WGBS/meth_table5x_filtered_sigDMG_median0.RData")  
 
 ## meta
 load("data/metadata/meta.RData")
 
-meth_group_list <- meth_table5x_filtered2 %>% dplyr::select(Sample.ID, meth_exp_group) %>% distinct()
+meth_group_list <- meth_table5x_filtered %>% dplyr::select(Sample.ID, meth_exp_group) %>% distinct()
+```
+
+## Loci status based on mean CpG % loci 
+
+```{r}
+loci_status <- summarySE(meth_table5x_filtered, measurevar = c("per.meth"), groupvars = c("scaffold", "position"))
+loci_status <- loci_status %>% unite(Loc, c("scaffold", "position"), sep = "_") %>% dplyr::select(-sd, -se, -ci) %>%
+  mutate(
+    loci_status = case_when(
+      per.meth < 10 ~ "unmethylated",
+      per.meth > 10 ~ "methylated"
+    )
+  )
+
+meth_table5x_filtered_loc <- meth_table5x_filtered %>% #dplyr::select(-loci_status) %>%
+  #unite(Loc, c("scaffold", "position"), sep = " ", remove = FALSE) %>%
+  left_join(., loci_status %>% dplyr::select(Loc, loci_status), by = "Loc")
+
+meth_table5x_filtered_sigDMG_loc <- meth_table5x_filtered_sigDMG %>% dplyr::select(-loci_status) %>%
+  #unite(Loc, c("scaffold", "position"), sep = " ", remove = FALSE) %>%
+  left_join(., loci_status %>% dplyr::select(Loc, loci_status), by = "Loc")
+
+meth_table5x_filtered_loc_filtered <- meth_table5x_filtered_loc %>%
+  dplyr::group_by(Loc) %>% filter(Loc > 0)
+
+## Figure 3C mean CpG loci % 
+gene.stats.groups <- summarySE(meth_table5x_filtered_loc, 
+                               measurevar = c("per.meth"), groupvars = c("Sample.ID", "meth_exp_group","loci_status"))
+
+DMGs.stats.groups <- summarySE(meth_table5x_filtered_sigDMG_loc, 
+                               measurevar = c("per.meth"), groupvars = c("Sample.ID", "meth_exp_group","loci_status"))
 ```
 
 
+## Histogram distributions 
+
+```{r}
+### number of loci per sample = 103,629 unique loci for all; 44,366 for sig DMG
+## sample size of D = 16; T1=20; T2=17 
+
+#### GENERAL HISTOGRAM OF CPG LOCI METHYLATION LEVEL 
+## hist for per.meth distribution for all genes
+# meth_table5x_filtered_loc %>%
+#   
+#   mutate(bin = cut(per.meth,
+#                    breaks = c(0, 10, 100),
+#                    labels = c("0–10%", "10–100%"),
+#                    include.lowest = TRUE)) %>%
+#   
+#   ggplot(aes(x=per.meth, fill=meth_exp_group)) + theme_bw() +
+#   facet_grid(bin ~ meth_exp_group, scales="free") +
+#   geom_histogram(alpha=0.6, position = 'identity') +
+#   scale_fill_manual(values=c("skyblue3", "olivedrab4", "darkgreen")) +
+#   labs(fill="") +
+#     labs(y = "Number of Loci",
+#        x = "DNA methylation level (%)") + 
+#   theme(strip.text.x = element_text(size = 12, color = "black", face = "bold"),
+#         strip.text.y = element_text(size = 12, color = "black", face = "bold"),
+#         strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"),
+#         legend.position = "none"
+#         )
+# 
+# ggsave(filename="data/figures/Supplemental Figure 3 Loci_Percent_methylation_all.jpeg", width=8, height=7, units="in")
+
+# ## hist for per.meth distribution for significant DMGs 
+# histDMG <- meth_table5x_filtered_sigDMG %>%
+#   ggplot(aes(x=per.meth, fill=meth_exp_group)) + theme_bw() +
+#   facet_grid(factor(loci_status, levels=c('unmethylated','sparsely methylated','methylated'))~meth_exp_group, scales="free") +
+#   geom_histogram(alpha=0.6, position = 'identity') +
+#   scale_fill_manual(values=c("skyblue3", "olivedrab4", "darkgreen")) +
+#   labs(fill="") +
+#   labs(y = "Number of Loci",
+#        x = "DNA methylation level (%)") + 
+#     theme(strip.text.x = element_text(size = 12, color = "black", face = "bold"),
+#         strip.text.y = element_text(size = 12, color = "black", face = "bold"),
+#         strip.background = element_rect(color="black", fill="white", linewidth=0.5, linetype="solid"),
+#         legend.position = "none"
+#         )
+# 
+# ggsave(filename="data/figures/Supplemental Figure 3 Loci_Percent_methylation_sigDMGs.jpeg", width=8, height=7, units="in")
+```
+
+```{r}
+##### without unmethylated 
+sample_counts <- meth_table5x_filtered %>%
+  distinct(meth_exp_group, Sample.ID) %>%
+  count(meth_exp_group, name = "n_samples")
+
+meth_table5x_filtered %>%
+  left_join(sample_counts, by = "meth_exp_group") %>%
+  group_by(Loc) %>%
+  filter(per.meth > 0) %>%
+  ungroup() %>%
+  mutate(bin = cut(per.meth,
+                   breaks = c(0, 10, 100),
+                   labels = c("0–10%", "10–100%"),
+                   include.lowest = TRUE)) %>%
+  ggplot(aes(x = per.meth, fill = meth_exp_group)) +
+    geom_histogram(aes(weight = 1 / n_samples),
+                   bins = 50, position = "identity", alpha = 0.7) +
+    facet_grid(bin ~ meth_exp_group, scales = "free") +
+    scale_fill_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+    labs(fill = "", y = "Number of loci per sample", x = "DNA methylation level (%)") +
+    theme_bw() +
+    theme(strip.text.x = element_text(size = 10, color = "black", face = "bold"),
+          strip.text.y = element_text(size = 10, color = "black", face = "bold"),
+          strip.background = element_rect(color = "black", fill = "white",
+                                          linewidth = 0.5, linetype = "solid"),
+          legend.position = "none",
+          #axis.text.x = element_blank(),
+          #axis.ticks.x = element_blank()
+          )
+
+ggsave(filename="data/figures/Loci_Percent_methylation_filtered.jpeg", width=6, height=3, units="in")
+```
+
 ## Calculating median loci methylation % per gene per sample
 
-Done with loci > 10% median methylation
 Figure made with DMGs 
 
 ```{r}
 ## Median from the filtered2 above
-gene.stats <- meth_table5x_filtered2 %>%
+gene.stats <- meth_table5x_filtered %>%
   dplyr::group_by(Sample.ID, gene) %>%
   mutate(median.gene = median(per.meth),
          mean.gene = mean(per.meth)) %>% ungroup() %>%
@@ -82,7 +194,7 @@ gene.stats <- meth_table5x_filtered2 %>%
 
 #gene.stats %>% dplyr::select(gene) %>% distinct()
 
-gene.stats.DMGs <- meth_table5x_filtered2_sigDMG %>%
+gene.stats.DMGs <- meth_table5x_filtered_sigDMG %>%
   dplyr::group_by(Sample.ID, gene) %>%
   mutate(median.gene = median(per.meth, na.rm=TRUE),
          mean.gene = mean(per.meth)) %>% ungroup() %>%
@@ -90,24 +202,79 @@ gene.stats.DMGs <- meth_table5x_filtered2_sigDMG %>%
   mutate(median.sample = median(median.gene),
          mean.sample = mean(mean.gene)) %>% ungroup()
 
+# Loc.stats <- meth_table5x_filtered %>%
+#   dplyr::group_by(meth_exp_group, Loc) %>%
+#   mutate(median.Loc = median(per.meth),
+#          mean.Loc = mean(per.meth)) %>% ungroup() %>%
+#   dplyr::group_by(Sample.ID) %>%
+#   mutate(median.sample = median(median.Loc),
+#          mean.sample = mean(mean.Loc)) %>% ungroup() %>%
+#   dplyr::select(meth_exp_group, Loc, median.Loc, mean.Loc) %>% distinct()
+# 
+# meth_table5x_filtered %>% filter(Loc == "Pocillopora_acuta_HIv2___Sc0000000_23737")
+
+
 #gene.stats.DMGs %>% write.csv("data/WGBS/DMG_statistics.csv", row.names = FALSE)
-  
-fig2C <- gene.stats.DMGs %>% 
+```
+
+```{r}
+gene.stats.groups %>%
   subset(!meth_exp_group == "ungroup") %>%
-    dplyr::select(Sample.ID, meth_exp_group, median.sample, mean.sample) %>% distinct() %>%
-    ggplot(., aes(x=meth_exp_group, y=mean.sample, color=meth_exp_group)) + 
+  mutate(
+    loci_status = recode(
+      loci_status,
+      "unmethylated" = "0-10%",
+      "methylated" = "10-100%"
+    ),
+    loci_status = factor(loci_status, levels = c("0-10%", "10-100%"))
+  ) %>%
+  ggplot(aes(x = meth_exp_group, y = per.meth, color = meth_exp_group)) +
+    geom_boxplot(outlier.shape = NA, size=0.75) +
+    geom_jitter(size = 3, alpha = 0.6, width=0.2) +
+    facet_wrap(~ loci_status, scales = "free", ncol=1) +
+    theme_bw() +
+  labs(
+    x = "",
+    y = "DNA methylation level (%)", 
+  ) + 
+
+    scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+    scale_y_continuous(expand = expansion(mult = c(0.2, 0.2))) +
+    theme(
+      axis.text.x = element_text(size = 14, color = "black"),
+      axis.text.y = element_text(size = 14, color = "black"),
+      strip.background = element_rect(color = "black", fill = "white", linewidth = 0.5, linetype = "solid"),
+      legend.position = "none",
+      legend.text = element_text(size = 14),
+      strip.text.x = element_text(size = 14, color = "black", face = "bold"),
+      #axis.title.x = element_text(margin = margin(t = 10), size = 14, face = "bold"),
+      axis.title.y = element_text(margin = margin(r = 10), size = 16),
+      
+    )
+
+ggsave("data/figures/Methylation_patterns_avg.png", width=3, height=5)
+```
+
+
+```{r}
+fig2C <- gene.stats.groups %>% 
+    subset(!meth_exp_group == "ungroup") %>%
+    # dplyr::select(Sample.ID, meth_exp_group, #loci_status, 
+    #               per.meth) %>% distinct() %>%
+    ggplot(., aes(x=meth_exp_group, y=per.meth, color=meth_exp_group)) + 
     geom_boxplot(outlier.shape=NA) +
     geom_jitter(size=3, alpha=0.7, width = 0.25) + 
     theme_bw() + 
-    geom_signif(comparisons = list(c("D", "T1"), c("T1", "T2"), c("D","T2")), 
-                annotations = "***", 
-                y_position = c(67,63,69),
-                color="grey30", 
-                size = 0.5) + ## size = linewidth()
+    # geom_signif(comparisons = list(c("D", "T1"), c("T1", "T2"), c("D","T2")), 
+    #             annotations = "***", 
+    #             y_position = c(67,63,69),
+    #             color="grey30", 
+    #             size = 0.5) + ## size = linewidth()
     ylab("CpG methylation level (%)") +
     #xlab("Ploidy Group") +
     xlab("") +
     labs(color = "Group") +
+    facet_wrap(~loci_status, scales = "free") +
     scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
     scale_y_continuous(expand=expansion(mult=c(0.2,0.2))) +
     #annotate(geom = "text", x=0.5, y=0.9, label = "p < 0.0001", size=8, color="grey45") +
@@ -120,16 +287,27 @@ fig2C <- gene.stats.DMGs %>%
           axis.title.y = element_text(margin = margin(t=0,r=10,b=0,l=0), size=12, face="bold"))
 ```
 
+
+## Stats
+
+```{r}
+meth_table5x_filtered_loc_0_10 <- meth_table5x_filtered_loc %>% subset(loci_status == "unmethylated")
+meth_table5x_filtered_loc_10_100 <- meth_table5x_filtered_loc %>% subset(loci_status == "methylated")
+```
+
 Statistics on the above 
 
 1225 
 2197
 
 ```{r}
-gene.stats.df <- gene.stats.DMGs %>% 
-  dplyr::select(Sample.ID, meth_exp_group, median.sample, mean.sample) %>% distinct()
+gene.stats.groups.unmeth <- gene.stats.groups %>% subset(loci_status=="unmethylated")
+gene.stats.groups.meth <- gene.stats.groups %>% subset(loci_status=="methylated")
+
+# gene.stats.df <- gene.stats.DMGs %>% 
+#   dplyr::select(Sample.ID, meth_exp_group, median.sample, mean.sample) %>% distinct()
   
-aov <- aov(mean.sample ~ meth_exp_group, data=gene.stats.df)
+aov <- aov(per.meth ~ meth_exp_group, data=gene.stats.groups.meth)
 summary(aov)
 TukeyHSD(aov)
 ```
@@ -177,7 +355,7 @@ col_labels_df <- heatmap.sample.DMG.df %>% dplyr::select(Sample.ID, meth_exp_gro
   ))
 col_labels <- col_labels_df$color
 
-pdf("data/figures/Fig2D_Heatmap_samples_DMG.pdf")
+pdf("data/figures/Heatmap_samples_DMG.pdf")
 heatmap_df<-
   heatmap.2(All_mat,
           cexCol = 1.5, 
@@ -223,8 +401,8 @@ save(All_data, file = "data/WGBS/heatmap/Heatmap_input.RData")
 
 ```{r}
 ## Create summary means for loci > 10% median methylation and sigDMG genes 
-pca.means.df <- aggregate(per.meth ~ gene*Sample.ID, data=meth_table5x_filtered2, FUN=mean)
-pca.means.dfsig <- aggregate(per.meth ~ gene*Sample.ID, data=meth_table5x_filtered2_sigDMG, FUN=mean)
+pca.means.df <- aggregate(per.meth ~ gene*Sample.ID, data=meth_table5x_filtered, FUN=mean)
+pca.means.dfsig <- aggregate(per.meth ~ gene*Sample.ID, data=meth_table5x_filtered_sigDMG, FUN=mean)
 
 # transform df so column names are gene names 
 All_data2 <- pca.means.df %>% 
@@ -278,7 +456,7 @@ pca_data_sig <- pca_data_sig %>% left_join(., meta, by = "Sample.ID")
 # PERMANOVA 
 permanova_all <- adonis2(vegan_all ~ ploidy, 
                          data = pca_data_all, method='eu', permutations = 9999)
-capture.output(permanova_all, file = "data/statistics/PERMANOVA_filtered2.txt")
+capture.output(permanova_all, file = "data/statistics/PERMANOVA_filtered.txt")
 
 permanova_sig <- adonis2(vegan_sig ~ ploidy, 
                          data = pca_data_sig, method='eu', permutations = 9999)
@@ -357,14 +535,14 @@ treatment_pca <- ggplot(pca_data_all, aes(PCA1, PCA2, color=Treatment)) +
 Plotting altogether for Figure 2
 
 ```{r}
-fig2_plots <- plot_grid(treatment_pca, ploidy_pca, fig2C,
-          labels=c("A)", "B)", "C)"), 
-          nrow=3, ncol=1,
+fig2_plots <- plot_grid(treatment_pca, ploidy_pca,
+          labels=c("A)", "B)"), 
+          nrow=1, ncol=2,
           align="v", 
           axis=c("lrtb"),
           rel_widths = c(2, 2, 2),
           rel_heights = c(2,2,1.7),
           label_size = 18)
 
-ggsave("data/figures/Fig2A-C PCAs.jpeg", fig2_plots, width = 5, height = 10)
+ggsave("data/figures/PCAs.jpeg", fig2_plots, width = 11, height = 4)
 ```

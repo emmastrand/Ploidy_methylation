@@ -158,9 +158,18 @@ This uses the mean but I could switch this to the median. The mean is more repre
 
 ```{r}
 ### Methylation data 
-gene.stats.DMGs <- read.csv("data/WGBS/DMG_statistics.csv") %>% 
-  dplyr::select(Sample.ID, gene, median.gene, mean.gene) %>% distinct() %>%
-  mutate(Sample.ID = as.character(Sample.ID)) 
+load("data/WGBS/meth_table5x_filtered_sigDMG.RData")
+
+gene.stats.DMGs <- meth_table5x_filtered_sigDMG %>%
+  
+  dplyr::group_by(gene, Sample.ID) %>%
+  summarise(
+    median_meth = median(per.meth, na.rm = TRUE),
+    mean_meth   = mean(per.meth, na.rm=TRUE),
+    .groups = "drop"
+  )
+
+length(unique(gene.stats.DMGs$gene))
 
 ### Gene expression data 
 GE.stats.formeth <- pacuta_counts %>% 
@@ -176,7 +185,7 @@ comparison_summary <- summarySE(EXP_METH_compare, measurevar = c("value"),
 comparison_summary_GE <- comparison_summary %>% filter(measurement == "count") %>%
   dplyr::select(gene, meth_exp_group, value, sd) %>% dplyr::rename(count = value) %>% dplyr::rename(count_sd = sd)
 
-comparison_summary_meth <- comparison_summary %>% filter(measurement == "mean.gene") %>% 
+comparison_summary_meth <- comparison_summary %>% filter(measurement == "mean_meth") %>% 
   dplyr::select(gene, meth_exp_group, value, sd) %>% dplyr::rename(per.meth = value) %>% dplyr::rename(meth_sd = sd) 
 
 comparison_summary2 <- full_join(comparison_summary_GE, comparison_summary_meth, by = c("gene", "meth_exp_group")) %>%
@@ -184,6 +193,8 @@ comparison_summary2 <- full_join(comparison_summary_GE, comparison_summary_meth,
          inv_CV = (1/CV),
          log_expression = log10(count+1)) %>%
   filter_all(all_vars(!is.infinite(.)))
+
+length(unique(comparison_summary2$gene))
 ```
 
 Methylation vs. Gene expression
@@ -263,7 +274,7 @@ comparison_summary2 %>%
   
   ggtitle(
     label = paste0("ANOVA Methylation p<0.0001; Ploidy p<0.0001"),
-    subtitle = paste0("TUKEY POST-HOC T2-D p=0.0017; T2-T1 p<0.0001")
+    subtitle = paste0("TUKEY POST-HOC D-T1 p=0.0001; D-T2 p < 0.0001; T1-T2 p<0.0001")
   ) +
   
   theme_bw() +

@@ -1,0 +1,159 @@
+---
+title: "GO Enrichment of cluster genes"
+author: "EL Strand"
+output:
+  github_document: default
+  pdf_document:
+    keep_tex: yes
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Hyper and hypo-methylated genes based on z-score of heatmap 
+
+## Load libraries 
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(Biostrings)
+library(strex)
+library(rstatix)
+library("ComplexHeatmap")
+library(gplots)
+library(RColorBrewer)
+library(ggh4x) ## for facet wrap options
+```
+
+## Load data 
+
+```{r}
+cluster1 <- read.delim2("data/WGBS/GOenrich/Cluster1_enrichment_terms_0.7sim.tsv") %>% mutate(cluster="cluster1") #%>%
+  #subset(!X.category == "COMPARTMENTS") %>% subset(!X.category == "UniProt Keywords")
+cluster2 <- read.delim2("data/WGBS/GOenrich/Cluster2_enrichment_terms.tsv") %>% mutate(cluster="cluster2")# %>%
+  #subset(!X.category == "COMPARTMENTS") %>% subset(!X.category == "UniProt Keywords")
+cluster3 <- read.delim2("data/WGBS/GOenrich/Cluster3_enrichment_terms_0.7sim.tsv") %>% mutate(cluster="cluster3") #%>%
+  #subset(!X.category == "COMPARTMENTS") %>% subset(!X.category == "UniProt Keywords")
+cluster4 <- read.delim2("data/WGBS/GOenrich/Cluster4_enrichment_terms_0.7sim.tsv") %>% mutate(cluster="cluster4") #%>%
+  #subset(!X.category == "COMPARTMENTS") %>% subset(!X.category == "UniProt Keywords")
+cluster5 <- read.delim2("data/WGBS/GOenrich/Cluster5_enrichment_terms.tsv") %>% mutate(cluster="cluster5") #%>%
+  #subset(!X.category == "COMPARTMENTS") %>% subset(!X.category == "UniProt Keywords")
+cluster6 <- read.delim2("data/WGBS/GOenrich/Cluster6_enrichment_terms.tsv") %>% mutate(cluster="cluster6") #%>%
+ #subset(!X.category == "COMPARTMENTS") %>% subset(!X.category == "UniProt Keywords")
+```
+
+## Group by pattern
+
+```{r}
+triploid <- full_join(cluster6, cluster2) %>% full_join(cluster5)
+diploid <- full_join(cluster4, cluster3) %>% full_join(cluster1)
+
+triploid <- triploid %>% dplyr::select(X.category, cluster, term.description, observed.gene.count,
+                                      background.gene.count, strength, signal, false.discovery.rate) %>%
+  mutate(false.discovery.rate = as.numeric(false.discovery.rate),
+         strength = as.numeric(strength),
+         signal = as.numeric(signal)
+         )  %>%
+  mutate(group = "triploid") %>%
+  mutate(X.category = case_when(
+    X.category == "GO Component" ~ "CC",
+    X.category == "GO Function" ~ "MF",
+    X.category == "GO Process" ~ "BP",
+    TRUE ~ X.category
+    ))
+  
+
+diploid <- diploid %>% dplyr::select(X.category, cluster, term.description, observed.gene.count,
+                                      background.gene.count, strength, signal, false.discovery.rate) %>%
+    mutate(false.discovery.rate = as.numeric(false.discovery.rate),
+         strength = as.numeric(strength),
+         signal = as.numeric(signal)
+         ) %>%
+  mutate(group = "diploid") %>%
+    mutate(X.category = case_when(
+    X.category == "GO Component" ~ "CC",
+    X.category == "GO Function" ~ "MF",
+    X.category == "GO Process" ~ "BP",
+    TRUE ~ X.category
+    ))
+```
+
+```{r}
+triploid %>%
+  ggplot(., aes(x=signal, y=term.description)) +
+  geom_point(aes(size=observed.gene.count, fill=false.discovery.rate, shape=cluster), alpha=0.7) +
+  
+  scale_shape_manual(values = c(21, 22, 24)) +
+  scale_fill_gradient(low="#1e6091", high="#d9ed92") +
+  
+  labs(
+    y = "",
+    x = "Signal",
+    fill = "FDR",
+    size = "Gene Count",
+    shape = "Cluster"
+  ) +
+  
+  facet_grid2(X.category ~ ., scales = "free", space = "free") +
+  theme_bw() +
+  theme(
+    ## facet wrap labels
+    strip.text.x = element_text(color = "black", face = "bold", size = 12),
+    strip.text.y = element_text(color = "black", face = "bold", size = 12),
+    strip.background.y = element_blank(),
+    strip.clip = "off",
+    
+    axis.text.y = element_text(size=11, color="black"),
+    axis.text.x = element_text(size=11, color="black"),
+    axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0), size=13, face="bold"),
+    axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0), size=13, face="bold")
+  )
+
+ggsave("data/figures/Triploidy_enrichment.png", width=9, height=5.5)
+```
+
+```{r}
+diploid %>%
+  ggplot(., aes(x=signal, y=term.description)) +
+  geom_point(aes(size=observed.gene.count, fill=false.discovery.rate, shape=cluster), alpha=0.7) +
+  
+  scale_shape_manual(values = c(21, 22, 24)) +
+  scale_fill_gradient(low="#1e6091", high="#d9ed92") +
+  
+  labs(
+    y = "",
+    x = "Signal",
+    fill = "FDR",
+    size = "Gene Count",
+    shape = "Cluster"
+  ) +
+  
+  facet_grid2(X.category ~ ., scales = "free", space = "free") +
+  theme_bw() +
+  theme(
+    ## facet wrap labels
+    strip.text.x = element_text(color = "black", face = "bold", size = 12),
+    strip.text.y = element_text(color = "black", face = "bold", size = 12),
+    strip.background.y = element_blank(),
+    strip.clip = "off",
+    
+    axis.text.y = element_text(size=8, color="black"),
+    axis.text.x = element_text(size=11, color="black"),
+    axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0), size=13, face="bold"),
+    axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0), size=13, face="bold")
+  )
+
+ggsave("data/figures/Diploid_enrichment.png", width=7, height=14)
+```
+
+
+
+
+
+
+
+

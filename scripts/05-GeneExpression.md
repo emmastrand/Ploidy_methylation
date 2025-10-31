@@ -33,8 +33,8 @@ library("tidyverse")
 
     ## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
     ## ✔ forcats   1.0.0     ✔ stringr   1.5.1
-    ## ✔ lubridate 1.9.3     ✔ tibble    3.2.1
-    ## ✔ purrr     1.0.2     ✔ tidyr     1.3.1
+    ## ✔ lubridate 1.9.4     ✔ tibble    3.3.0
+    ## ✔ purrr     1.1.0     ✔ tidyr     1.3.1
     ## ✔ readr     2.1.5
 
     ## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
@@ -832,10 +832,23 @@ more representative after removing the loci with 0 % methylation.
 
 ``` r
 ### Methylation data 
-gene.stats.DMGs <- read.csv("data/WGBS/DMG_statistics.csv") %>% 
-  dplyr::select(Sample.ID, gene, median.gene, mean.gene) %>% distinct() %>%
-  mutate(Sample.ID = as.character(Sample.ID)) 
+load("data/WGBS/meth_table5x_filtered_sigDMG.RData")
 
+gene.stats.DMGs <- meth_table5x_filtered_sigDMG %>%
+  
+  dplyr::group_by(gene, Sample.ID) %>%
+  summarise(
+    median_meth = median(per.meth, na.rm = TRUE),
+    mean_meth   = mean(per.meth, na.rm=TRUE),
+    .groups = "drop"
+  )
+
+length(unique(gene.stats.DMGs$gene))
+```
+
+    ## [1] 3692
+
+``` r
 ### Gene expression data 
 GE.stats.formeth <- pacuta_counts %>% 
   rownames_to_column(., var="gene") %>%
@@ -850,7 +863,7 @@ comparison_summary <- summarySE(EXP_METH_compare, measurevar = c("value"),
 comparison_summary_GE <- comparison_summary %>% filter(measurement == "count") %>%
   dplyr::select(gene, meth_exp_group, value, sd) %>% dplyr::rename(count = value) %>% dplyr::rename(count_sd = sd)
 
-comparison_summary_meth <- comparison_summary %>% filter(measurement == "mean.gene") %>% 
+comparison_summary_meth <- comparison_summary %>% filter(measurement == "mean_meth") %>% 
   dplyr::select(gene, meth_exp_group, value, sd) %>% dplyr::rename(per.meth = value) %>% dplyr::rename(meth_sd = sd) 
 
 comparison_summary2 <- full_join(comparison_summary_GE, comparison_summary_meth, by = c("gene", "meth_exp_group")) %>%
@@ -858,7 +871,11 @@ comparison_summary2 <- full_join(comparison_summary_GE, comparison_summary_meth,
          inv_CV = (1/CV),
          log_expression = log10(count+1)) %>%
   filter_all(all_vars(!is.infinite(.)))
+
+length(unique(comparison_summary2$gene))
 ```
+
+    ## [1] 2952
 
 Methylation vs. Gene expression
 
@@ -869,10 +886,10 @@ summary(ANOVA)
 ```
 
     ##                           Df Sum Sq Mean Sq F value Pr(>F)    
-    ## meth_exp_group             2      2    1.18   0.518  0.596    
-    ## per.meth                   1    244  243.63 107.104 <2e-16 ***
-    ## meth_exp_group:per.meth    2      5    2.32   1.019  0.361    
-    ## Residuals               3909   8892    2.27                   
+    ## meth_exp_group             2      0     0.2   0.090  0.914    
+    ## per.meth                   1    496   496.4 190.650 <2e-16 ***
+    ## meth_exp_group:per.meth    2      2     0.9   0.364  0.695    
+    ## Residuals               8850  23044     2.6                   
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
@@ -928,11 +945,11 @@ ANOVA <- aov(inv_CV~meth_exp_group*per.meth, data = comparison_summary2)
 summary(ANOVA)
 ```
 
-    ##                           Df Sum Sq Mean Sq F value Pr(>F)    
-    ## meth_exp_group             2  20166   10083  73.396 <2e-16 ***
-    ## per.meth                   1  18051   18051 131.390 <2e-16 ***
-    ## meth_exp_group:per.meth    2    433     217   1.577  0.207    
-    ## Residuals               3909 537026     137                   
+    ##                           Df  Sum Sq Mean Sq F value  Pr(>F)    
+    ## meth_exp_group             2   26725   13362  94.017 < 2e-16 ***
+    ## per.meth                   1   69647   69647 490.031 < 2e-16 ***
+    ## meth_exp_group:per.meth    2    1631     816   5.738 0.00323 ** 
+    ## Residuals               8850 1257826     142                    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
@@ -953,9 +970,9 @@ summary(glht(ANOVA, linfct = mcp(meth_exp_group = "Tukey")))
     ## 
     ## Linear Hypotheses:
     ##              Estimate Std. Error t value Pr(>|t|)    
-    ## T1 - D == 0   -0.6871     1.1646  -0.590  0.82537    
-    ## T2 - D == 0    3.9846     1.1579   3.441  0.00168 ** 
-    ## T2 - T1 == 0   4.6717     1.0899   4.286  < 1e-04 ***
+    ## T1 - D == 0   -1.4674     0.3556  -4.127 0.000107 ***
+    ## T2 - D == 0    2.2305     0.3554   6.275  < 1e-04 ***
+    ## T2 - T1 == 0   3.6979     0.3530  10.476  < 1e-04 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## (Adjusted p values reported -- single-step method)
@@ -971,22 +988,22 @@ summary(lm_model)
     ## 
     ## Residuals:
     ##     Min      1Q  Median      3Q     Max 
-    ## -28.864  -7.831  -1.561   6.047 112.795 
+    ## -31.909  -8.652  -1.666   6.631 115.023 
     ## 
     ## Coefficients:
     ##                           Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)               24.82917    0.86865  28.583  < 2e-16 ***
-    ## meth_exp_groupT1          -0.68711    1.16458  -0.590 0.555219    
-    ## meth_exp_groupT2           3.98458    1.15794   3.441 0.000585 ***
-    ## per.meth                   0.09523    0.01252   7.606 3.51e-14 ***
-    ## meth_exp_groupT1:per.meth -0.03055    0.01721  -1.775 0.075999 .  
-    ## meth_exp_groupT2:per.meth -0.01530    0.01713  -0.893 0.371709    
+    ## (Intercept)               23.86678    0.25317  94.271  < 2e-16 ***
+    ## meth_exp_groupT1          -1.46737    0.35559  -4.127 3.72e-05 ***
+    ## meth_exp_groupT2           2.23053    0.35544   6.275 3.65e-10 ***
+    ## per.meth                   0.12991    0.00956  13.588  < 2e-16 ***
+    ## meth_exp_groupT1:per.meth -0.02982    0.01383  -2.155   0.0312 *  
+    ## meth_exp_groupT2:per.meth  0.01757    0.01385   1.269   0.2046    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## Residual standard error: 11.72 on 3909 degrees of freedom
-    ## Multiple R-squared:  0.06714,    Adjusted R-squared:  0.06595 
-    ## F-statistic: 56.27 on 5 and 3909 DF,  p-value: < 2.2e-16
+    ## Residual standard error: 11.92 on 8850 degrees of freedom
+    ## Multiple R-squared:  0.07228,    Adjusted R-squared:  0.07176 
+    ## F-statistic: 137.9 on 5 and 8850 DF,  p-value: < 2.2e-16
 
 ``` r
 ### figure with stats
@@ -1009,7 +1026,7 @@ comparison_summary2 %>%
   
   ggtitle(
     label = paste0("ANOVA Methylation p<0.0001; Ploidy p<0.0001"),
-    subtitle = paste0("TUKEY POST-HOC T2-D p=0.0017; T2-T1 p<0.0001")
+    subtitle = paste0("TUKEY POST-HOC D-T1 p=0.0001; D-T2 p < 0.0001; T1-T2 p<0.0001")
   ) +
   
   theme_bw() +
@@ -1027,6 +1044,112 @@ comparison_summary2 %>%
 
 ``` r
 ggsave("data/figures/Fig4A_Methylation_CV.png", width = 5.5, height = 4.5)
+```
+
+Gene expression vs. inv CV
+
+``` r
+### statistic
+comparison_summary2$meth_exp_group <- as.factor(comparison_summary2$meth_exp_group)
+ANOVA <- aov(inv_CV ~ meth_exp_group*count, data = comparison_summary2)
+summary(ANOVA)
+```
+
+    ##                        Df  Sum Sq Mean Sq F value   Pr(>F)    
+    ## meth_exp_group          2   26725   13362  113.71  < 2e-16 ***
+    ## count                   1  285778  285778 2431.82  < 2e-16 ***
+    ## meth_exp_group:count    2    3307    1654   14.07 7.91e-07 ***
+    ## Residuals            8850 1040018     118                     
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+``` r
+summary(glht(ANOVA, linfct = mcp(meth_exp_group = "Tukey")))
+```
+
+    ## Warning in mcp2matrix(model, linfct = linfct): covariate interactions found --
+    ## default contrast might be inappropriate
+
+    ## 
+    ##   Simultaneous Tests for General Linear Hypotheses
+    ## 
+    ## Multiple Comparisons of Means: Tukey Contrasts
+    ## 
+    ## 
+    ## Fit: aov(formula = inv_CV ~ meth_exp_group * count, data = comparison_summary2)
+    ## 
+    ## Linear Hypotheses:
+    ##              Estimate Std. Error t value Pr(>|t|)
+    ## T1 - D == 0     1.349      1.363   0.990    0.583
+    ## T2 - D == 0    -1.335      1.349  -0.989    0.584
+    ## T2 - T1 == 0   -2.684      1.346  -1.994    0.114
+    ## (Adjusted p values reported -- single-step method)
+
+``` r
+lm_model <- lm(inv_CV ~ meth_exp_group+count, data = comparison_summary2)
+summary(lm_model)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = inv_CV ~ meth_exp_group + count, data = comparison_summary2)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -32.592  -7.092  -1.139   5.697 110.336 
+    ## 
+    ## Coefficients:
+    ##                  Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)      -1.01411    0.57591  -1.761   0.0783 .  
+    ## meth_exp_groupT1 -2.05070    0.28259  -7.257 4.29e-13 ***
+    ## meth_exp_groupT2  2.24414    0.28258   7.942 2.24e-15 ***
+    ## count             3.48408    0.07076  49.241  < 2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 10.86 on 8852 degrees of freedom
+    ## Multiple R-squared:  0.2305, Adjusted R-squared:  0.2302 
+    ## F-statistic: 883.8 on 3 and 8852 DF,  p-value: < 2.2e-16
+
+``` r
+### figure with stats
+comparison_summary2 %>%
+  ggplot(., aes(x=count, y=inv_CV, color=meth_exp_group)) + 
+  geom_point(alpha=0.2, size=0.75) + 
+
+  labs(
+    y = "Gene expression (CV-1)",
+    x = "Gene expression (counts)"
+  )+
+  
+  stat_poly_line(linewidth=1) +
+  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+  stat_poly_eq(vjust=0.1, hjust=0.2) +
+  
+  # Add y-axis buffer of 0.2
+  # scale_y_continuous(limits = c(min(comparison_summary2$CV) - min(comparison_summary2$CV)*0.01,
+  #                                max(comparison_summary2$CV) + max(comparison_summary2$CV)*0.02)) +
+  
+  ggtitle(
+    label = paste0("ANOVA count p<0.0001; ploidy; p<0.0001; count x ploidy p=0.048")
+    #subtitle = paste0("TUKEY POST-HOC ploidy no significance")
+  ) +
+  
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.text.y = element_text(size=10, color="black"),
+        axis.text.x = element_text(size=10, color="black"),
+        plot.title = element_text(size=10, color="grey55", face = "italic"),
+        plot.subtitle = element_text(size=10, color="grey55", face = "italic"),
+        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0), size=11, face="bold"),
+        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0), size=11, face="bold")
+  )
+```
+
+![](05-GeneExpression_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+
+``` r
+ggsave("data/figures/Supplemental Figure 5 Expression_CV.png", width = 5.5, height = 4.5)
 ```
 
 ## Targeted Epigenetic machinery gene expression
@@ -1133,7 +1256,7 @@ heatmap_output <- pheatmap(ordered_distance_matrix_df,
          cutree_rows = 4)
 ```
 
-![](05-GeneExpression_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+![](05-GeneExpression_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
 ``` r
 dev.off()
