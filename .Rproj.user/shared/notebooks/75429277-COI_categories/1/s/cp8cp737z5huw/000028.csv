@@ -1,0 +1,7 @@
+"0","COIdb <- read_xlsx(""C:/BoxDrive/Box/Science/Fisheries/Projects/eDNA/Metabarcoding Lab Resources/Reference Databases/GMGI_COI_Ref.xlsx"")"
+"0",""
+"0","COI_cat <- COIdb %>%"
+"0","  dplyr::select(Domain, Kingdom, Phylum, Class, Order, Original_Category=Category) %>% distinct() %>%"
+"0","  arrange(Domain, Kingdom, Phylum, Class, Order, Original_Category)"
+"0",""
+"0","COI_cat %>% dplyr::select(Original_Category) %>% distinct()"

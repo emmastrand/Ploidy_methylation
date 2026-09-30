@@ -1,0 +1,6 @@
+"0","## Adding cleaned taxonomic information to ASV_table"
+"0","ASV_table_annotated <- data_choices_made %>% full_join(ASV_table, by = ""ASV_ID"") %>% "
+"0","  dplyr::select(-method, -confidence) %>% distinct()"
+"0",""
+"0","### Filtering for Liitorinimorpha species "
+"0","ASV_table_annotated %>% subset(Order == ""Littorinimorpha"") #%>% "

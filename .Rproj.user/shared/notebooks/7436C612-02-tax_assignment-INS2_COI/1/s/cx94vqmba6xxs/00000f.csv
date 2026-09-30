@@ -1,0 +1,8 @@
+"0","### Taxonomic level "
+"0","ASV_table_collapsed %>% write_xlsx(""../results/Results_taxonomic_level_matrix.xlsx"")"
+"0",""
+"0","ASV_table_collapsed %>% gather(""sampleID"", ""reads"", 11:last_col()) %>%"
+"0","  group_by(Domain, Kingdom, Phylum, Class, Order, Family, Genus, Species_name, Common_name, Category) %>%"
+"0","  reframe(Reads = sum(reads)) %>%"
+"0","  arrange(desc(Reads)) %>%"
+"0","  write_xlsx(""../results/Summary_Taxonomic_Level.xlsx"")"

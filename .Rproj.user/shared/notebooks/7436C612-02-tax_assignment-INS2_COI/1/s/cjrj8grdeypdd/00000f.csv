@@ -1,0 +1,4 @@
+"0","## Read choices back in"
+"0","multiple_hit_choice_edited <- read_xlsx(""../taxonomic_assignments/LCA_MZG_comparison_multiple_hits_v2_edited.xlsx"") %>%"
+"0","  ## selecting the choices made"
+"0","  filter(!is.na(Choice))"

@@ -1,0 +1,458 @@
+---
+title: "Classifications for epigenes"
+author: "HM Putnam"
+date: "2026-06-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load libraries
+
+```{r}
+library(biomaRt)
+library(dplyr)
+library(stringr)
+library(readr)
+library(readxl)
+library(writexl)
+library(tidyverse)
+library(car)
+library(Rmisc)
+library(data.table)
+library(ggh4x)
+#BiocManager::install(c("BiocFileCache", "biomaRt"), update = TRUE, ask = FALSE)
+
+set.seed(123)
+```
+
+## Load Fellous data
+
+```{r}
+emma_notes <- read_xlsx("data/gene expression/proteins_to_annotate.xlsx", sheet=2)
+```
+
+
+All of the P.acuta blast top hits = 473 protien names
+
+ENSID from the fasta = 512 unique EN IDs and protein names
+
+```{r}
+epigenes_blast <- read.delim2("data/gene expression/Pocillopora_acuta.tblastn_top_hits.tsv",
+                              header=F, col.names = c("protein", "gene", "pident", "length", "mismatch",
+                                                      "gapopen", "qstart", "qend", "sstart", "send", 
+                                                      "evalue", "bitscore", "sframe"))
+
+length(unique(epigenes_blast$protein))
+
+ENSID <- read.csv("data/gene expression/fasta_headers.csv") %>% 
+  separate(header, into = c("protein", "note", "EN ID", "note2"), sep = " ") %>%
+  dplyr::select(protein, `EN ID`)
+
+length(unique(ENSID$`EN ID`)) ## 512
+length(unique(ENSID$protein)) ## 512
+
+fellous_data <- epigenes_blast %>% dplyr::select(gene, protein) %>%
+  left_join(., ENSID) %>%
+  mutate(method = "Fellous_et_al")
+
+length(unique(fellous_data$gene))
+```
+
+### Create descriptions and enzyme names based on EN IDs in Fellous 
+
+```{r}
+ids <- fellous_data$`EN ID`
+ids_unique <- unique(ids)
+
+human_ids <- ids_unique[str_detect(ids_unique, "^ENSP")]
+mouse_ids <- ids_unique[str_detect(ids_unique, "^ENSMUSP")]
+zfish_ids <- ids_unique[str_detect(ids_unique, "^ENSDARP")]
+
+# Make archived marts once
+# human_mart <- useEnsembl(
+#   biomart = "genes",
+#   dataset = "hsapiens_gene_ensembl",
+#   version = 113
+# )
+
+## I ran into trouble connecting to the server once I updated my R
+## mirror is the host server with the same data; this was trial and error with different mirrors
+human_mart <- useEnsembl(biomart="genes", dataset="hsapiens_gene_ensembl")
+mouse_mart <- useEnsembl(biomart="genes", dataset="mmusculus_gene_ensembl", mirror="asia")
+zfish_mart <- useEnsembl(biomart = "genes", dataset = "drerio_gene_ensembl", mirror="useast")
+
+# Function now uses the mart you give it
+get_map <- function(ids, mart){
+  getBM(
+    attributes = c(
+      "ensembl_peptide_id",
+      "ensembl_gene_id",
+      "external_gene_name",
+      "description",
+      "go_id",
+      "name_1006"
+    ),
+    filters = "ensembl_peptide_id",
+    values = ids,
+    mart = mart
+  )
+}
+
+human <- get_map(human_ids, human_mart)
+mouse <- get_map(mouse_ids, mouse_mart)
+zfish <- get_map(zfish_ids, zfish_mart)
+
+mapped <- bind_rows(
+  human %>% mutate(species = "human"),
+  mouse %>% mutate(species = "mouse"),
+  zfish %>% mutate(species = "zebrafish")
+)
+
+words <- unique(mapped$name_1006)
+ENID_annotation <- bind_rows(human, mouse, zfish) %>% distinct(ensembl_peptide_id, .keep_all = TRUE)
+
+length(unique(ENID_annotation$ensembl_peptide_id))
+### 469 EN IDs out of 473 were annotated in this process 
+
+fellous_data <- fellous_data %>% 
+  left_join(., ENID_annotation %>% 
+              dplyr::select(`EN ID`=ensembl_peptide_id, external_gene_name, description, name_1006)
+            )
+
+length(unique(fellous_data$gene)) ## 327 genes for
+length(unique(fellous_data$`EN ID`)) ## 473 proteins 
+
+fellous_data %>% write_xlsx("data/gene expression/fellous_data_mappedEnsembl.xlsx")
+## if ensembl connection fails again, read back in the xlsx above
+```
+
+## Load P.acuta gff annotation data
+
+```{r}
+gff <- read.delim2("data/gene expression/Pocillopora_acuta_HIv2.genes.EggNog_results.txt") %>%
+  dplyr::select(gene=1, description=Description) %>%
+  mutate(method = "gff")
+
+length(unique(gff$gene)) # 16,785 genes 
+```
+
+## Classifying genes based on keywords 
+
+Deciding on epigenetic keywords 
+
+```{r}
+### CLASSIFIED AS MODERATE
+epi_keywords <- regex(
+  paste(c(
+    "epigen", "chromatin", "histone", "nucleosome",
+    "DNA methyl", "methyltransferase", "demethylase",
+    "acetyltransferase", "deacetylase",
+    "Polycomb", "Trithorax", "SWI/SNF", "remodel",
+    "heterochromatin", "euchromatin", "reader",
+    "bromodomain", "chromodomain", "SET domain",
+    "TET", "DNMT", "HDAC", "KMT", "KDM", "EZH",
+    "PRC1", "PRC2", "MBD", "MeCP"
+  ), collapse = "|"),
+  ignore_case = TRUE
+)
+
+
+### CLASSIFIED AS STRONG "chromatin remodeling", "SWI", "SNF", "nucleosome"
+epi_strong <- regex(
+  paste(c(
+    "DNA methyl", "histone", "methyltransferase", "demethylase", "acetyltransferase", 
+    "deacetylase", "Polycomb", "Trithorax"
+  ), collapse = "|"),
+  ignore_case = TRUE
+)
+```
+
+Classifying both dfs 
+
+```{r}
+fellous_data_classified <- fellous_data %>%
+  mutate(
+    epi_flag = str_detect(paste(description, name_1006), epi_keywords),
+    evidence_strength = case_when(
+      str_detect(paste(description, name_1006), epi_strong) ~ "Strong/direct",
+      epi_flag ~ "Moderate",
+      TRUE ~ "No clear evidence from GO/description"
+    )) 
+
+fellous_data_classified %>% group_by(evidence_strength) %>%
+  reframe(count = n_distinct(gene))
+```
+
+```{r}
+gff_classified <- gff %>%   
+  mutate(
+    epi_flag = str_detect(paste(description), epi_keywords),
+    evidence_strength = case_when(
+      str_detect(paste(description), epi_strong) ~ "Strong/direct",
+      epi_flag ~ "Moderate",
+      TRUE ~ "No clear evidence from GO/description"
+    )) 
+
+gff_classified %>% group_by(evidence_strength) %>%
+  reframe(count = n_distinct(gene))
+```
+
+
+### Putting final list together
+
+```{r}
+both_df <- full_join(gff_classified, fellous_data_classified) %>%
+  subset(!evidence_strength=="No clear evidence from GO/description") %>%
+  arrange(gene)
+
+both_df %>% group_by(evidence_strength) %>%
+  reframe(count = n_distinct(gene))
+
+strong_evidence_df <- both_df %>%
+  subset(evidence_strength=="Strong/direct")
+
+## 517 unique genes with moderate or strong evidence 
+length(unique(both_df$gene))
+```
+
+## Running ANOVA 
+
+```{r}
+meta <- read.csv("data/metadata/meth_pattern_groups.csv") %>% dplyr::select(-X) %>%
+  mutate(Sample.ID = as.character(Sample.ID)) 
+
+Pacuta_data_filt <- read.csv("data/gene expression/GE_Pacuta_data_filt.csv") %>%
+  filter(X %in% strong_evidence_df$gene) %>% dplyr::rename(gene=X) %>%
+  gather("Sample.ID", "count", 2:last_col()) %>% 
+  mutate(Sample.ID = gsub("X", "", Sample.ID)) %>%
+  left_join(., meta, by = "Sample.ID") %>%
+  group_by(Sample.ID) %>% filter(!is.na(count))
+
+### genes we have data for
+strong_evidence_df %>% subset(evidence_strength == "Strong/direct") %>%
+  filter(gene %in% Pacuta_data_filt$gene) %>% dplyr::select(gene) %>% distinct()
+
+length(unique(Pacuta_data_filt$gene))
+```
+
+### Step 1: Run ANOVA for all genes + BH FDR correction 
+
+313 genes 
+
+```{r}
+### running ANOVA loop on all genes in this df to see which ones have significant expression differences
+epigene_anova <- data.frame()
+
+for (i in unique(Pacuta_data_filt$gene)){
+  stats_subset <- Pacuta_data_filt %>% subset(gene==i)
+  aov_model <- aov(count ~ meth_exp_group, data=stats_subset)
+  ANOVA <- Anova(aov_model, type="III")
+  
+  pvalue <- as.data.table(ANOVA)[2,4] %>% dplyr::rename(pvalue=`Pr(>F)`)
+  DF <- data.frame(gene=i, pvalue)
+  
+  epigene_anova <- rbind(epigene_anova, DF)
+}
+
+epigene_anova$padj <- p.adjust(epigene_anova$pvalue, method="BH")
+```
+
+### Step 2: Keep only significant genes
+
+69 significant genes post padj
+
+```{r}
+sig_genes <- epigene_anova %>% filter(padj < 0.05)
+Pacuta_data_filt_sig <- Pacuta_data_filt %>% filter(gene %in% sig_genes$gene)
+
+length(unique(Pacuta_data_filt_sig$gene))
+```
+
+### Step 3: Run Tukey post hoc tests only on significant genes
+
+```{r}
+epigene_tukey <- data.frame()
+
+for (i in sig_genes$gene){
+  stats_subset <- Pacuta_data_filt %>% subset(gene==i)
+  aov_model <- aov(count ~ meth_exp_group, data=stats_subset)
+  TUKEY <- TukeyHSD(aov_model)
+  
+  Tukeydf <- as.data.frame(TUKEY$meth_exp_group[,4]) %>% 
+    rownames_to_column("comparison") %>% 
+    dplyr::rename(pvalue=`TUKEY$meth_exp_group[, 4]`)
+  
+  Tukeydf$gene <- i
+  
+  epigene_tukey <- rbind(epigene_tukey, Tukeydf)
+}
+
+epigene_tukey$padj <- p.adjust(epigene_tukey$pvalue, method="BH") 
+
+epigene_results <- epigene_tukey %>% dplyr::select(-pvalue) %>%
+  spread(comparison, padj) %>%
+  mutate_if(is.numeric, round, 8)
+```
+
+```{r}
+# epigene_results_filtered <- epigene_results %>% distinct() %>%
+#   mutate(sig = ifelse(pvalue < 0.050, "significant", "NS"))
+# 
+# ## genes with significantly different expression = 140 genes 
+# significant_genes = epigene_results_filtered %>% filter(pvalue < 0.050) %>% dplyr::select(gene) %>% distinct()
+
+#### mean expression of significant genes 
+# Pacuta_data_filt_significant <- Pacuta_data_filt 
+
+pacuta_counts <- read.csv("data/gene expression/pacuta_counts_vst.csv") %>% dplyr::rename(gene=X) %>% 
+  filter(gene %in% epigene_results$gene) %>% rename_with(~ sub("^X", "", .x)) %>%
+  gather("Sample.ID", "count", 2:last_col()) %>%
+  left_join(., meta)
+
+length(unique(pacuta_counts$gene))
+
+mean_expression <- summarySE(pacuta_counts, measurevar = c("count"),
+                               groupvars = c("gene", "meth_exp_group")) %>%
+  dplyr::select(-N, -sd, -se, -ci) %>%
+  spread(meth_exp_group, count)
+```
+
+Adding strong evidence df annotations to the significant genes 
+
+```{r}
+epigene_results %>% left_join(., strong_evidence_df, by = "gene") %>% 
+  write_xlsx("data/gene expression/Epigenes_classified_significant_9-30-2026_tobin.xlsx")
+
+# sig_df_ <- both_df %>% 
+#   filter(gene %in% significant_genes$gene) %>% left_join(., epigene_results_filtered, by = "gene")
+# 
+# ## 109 with strong/direct evidence 
+# both_df_sig_strong <- both_df_sig %>% subset(evidence_strength == "Strong/direct")
+# length(unique(both_df_sig_strong$gene))
+```
+
+## plotting strong only
+
+Calculating distance from diploid 
+
+```{r}
+sig_PH <- epigene_results %>% 
+  dplyr::select(gene, T1=`T1-D`, T2=`T2-D`) %>%
+  gather("ploidy", "TPH", T1:T2) %>%
+  filter(TPH < 0.050) 
+
+diploid_distance <- mean_expression %>% #filter(gene %in% both_df_sig_strong$gene) %>%
+  dplyr::select(gene, D, T1, T2) %>%
+  mutate(
+    T1 = T1-D,
+    T2 = T2-D
+  ) %>%
+  gather("ploidy", "distance", T1:T2) %>% dplyr::select(-D)
+
+gene_exp_stats_for_plot <- full_join(sig_PH, diploid_distance) %>%
+  filter(!is.na(TPH))
+
+## 67 genes to plot 
+length(unique(gene_exp_stats_for_plot$gene))
+```
+
+Adding bin information
+
+```{r}
+# both_df_sig_strong %>% write_xlsx("data/gene expression/Epigenes_classified_sig_strong_7-9-2026_tobin.xlsx")
+# 
+
+# both_df_sig_strong_bin <- both_df_sig_strong %>%
+#   mutate(
+#     search_text = paste(description, name_1006, sep = " "),
+#     bin = case_when(
+#       str_detect(search_text, regex("tRNA", ignore_case = TRUE)) ~ "tRNA methyltransferase",
+#       str_detect(search_text, regex("rRNA", ignore_case = TRUE)) ~ "rRNA methyltransferase",
+#       str_detect(search_text, regex("lysine.*methyltransferase", ignore_case = TRUE)) ~ "Histone methyltransferase",
+#       str_detect(search_text, regex("histone.*methyltransferase", ignore_case = TRUE)) ~ "Histone methyltransferase",
+#       str_detect(search_text, regex("histone.*deacetylase", ignore_case = TRUE)) ~ "Histone deacetylase",
+#       str_detect(search_text, regex("demethylase", ignore_case = TRUE)) ~ "Histone demethylase",
+#       str_detect(search_text, regex("WD40 repeats", ignore_case = TRUE)) ~ "WD40 repeats",
+#       str_detect(search_text, regex("PHD", ignore_case = TRUE)) ~ "PHD finger protein",
+# 
+#       # Epitranscriptome
+#       str_detect(search_text, regex("mRNA", ignore_case = TRUE)) ~ "mRNA cap 0 methyltransferase",
+#       str_detect(search_text, regex("RsmB NOP family", ignore_case = TRUE)) ~ "RsmB NOP family",
+#       str_detect(search_text, regex("gTMT family", ignore_case = TRUE)) ~ "gTMT family",
+# 
+#       str_detect(search_text, regex("Homocysteine", ignore_case = TRUE)) ~ "Homocysteine S-methyltransferase",
+# 
+#       str_detect(search_text, regex("protein-arginine", ignore_case = TRUE)) ~
+#         "Protein arginine N-methyltransferase activity",
+#       str_detect(search_text, regex("Protein arginine", ignore_case = TRUE)) ~
+#         "Protein arginine N-methyltransferase activity",
+# 
+#       str_detect(search_text, regex("DNA.*methyltransferase", ignore_case = TRUE)) ~ "DNA methyltransferase",
+#       str_detect(search_text, regex("reader", ignore_case = TRUE)) ~ "DNA methylation reader",
+#       str_detect(search_text, regex("Arsenite", ignore_case = TRUE)) ~ "Arsenite methyltransferase",
+#       str_detect(search_text, regex("carnosine", ignore_case = TRUE)) ~ "Carnosine methyltransferase",
+#       str_detect(search_text, regex("Thiopurine", ignore_case = TRUE)) ~ "Thiopurine S-methyltransferase",
+#       str_detect(search_text, regex("carboxyl", ignore_case = TRUE)) ~ "Carboxyl methyltransferase",
+#       str_detect(search_text, regex("o-methyltransferase", ignore_case = TRUE)) ~ "O-methyltransferase",
+#       str_detect(search_text, regex("aminomethyltransferase", ignore_case = TRUE)) ~ "Aminomethyltransferase activity",
+#       str_detect(search_text, regex("^(?!.*histone).*deacetylase", ignore_case = TRUE)) ~ "Deacetylase",
+# 
+#       TRUE ~ "methyltransferase"
+#     )
+#   ) %>%
+#   select(-search_text)
+
+both_df_sig_strong_bin <- read_xlsx("data/gene expression/Epigenes_classified_significant_9-30-2026_binned.xlsx")
+
+both_df_sig_strong_bin %>% filter(!is.na(bin)) %>% dplyr::select(gene) %>% distinct()
+```
+
+
+Plotting
+
+```{r}
+final_df_for_plot <- gene_exp_stats_for_plot %>% 
+  left_join(., both_df_sig_strong_bin %>% dplyr::select(gene, method, description, name_1006, bin)) %>%
+  filter(!is.na(bin))
+
+length(unique(final_df_for_plot$gene))
+
+final_df_for_plot %>% subset(ploidy=="T2") %>% filter(distance>0) 
+
+final_df_for_plot %>%
+  
+  #ggplot(aes(x = sign(distance) * log10(abs(distance) + 1), y = gene)) +
+  ggplot(aes(x=distance, y=gene)) + 
+  geom_point(aes(fill = ploidy), size = 2, shape = 21, alpha = 0.65, color = "black") +
+  facet_grid2(
+    bin ~ .,
+    scales = "free",
+    space = "free",
+    labeller = labeller(bin = label_wrap_gen(width = 5))
+  ) +
+  ylab("") +
+  scale_fill_manual(values = c("olivedrab4", "darkgreen")) +
+  geom_vline(xintercept = 0, color = "grey60", lty = "dotted") +
+  theme_bw() +
+  theme(
+    axis.text.y = element_blank(),
+    legend.position = "none",
+    strip.text.x = element_text(face = "bold", size = 8),
+    strip.text.y = element_text(face = "bold", size = 8, angle = 0),
+    strip.background.y = element_blank(),
+    strip.clip = "off"
+  )
+
+ggsave("data/figures/GE_epigenetic_machinery_distance_20260930.png", height=12, width=3)
+```
+
+
+
+
+
+
+
+

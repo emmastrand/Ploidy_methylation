@@ -1,0 +1,5 @@
+"0","## extracting data from heatmapdf"
+"0","zscore_df <- as.data.frame(heatmap_df$carpet) ##carpet score is the zscore that goes into the heatmap"
+"0","save(zscore_df, file = ""data/WGBS/heatmap/zscore.RData"")"
+"0","save(heatmap_df, file = ""data/WGBS/heatmap/Heatmap_output.RData"")"
+"0","save(All_data, file = ""data/WGBS/heatmap/Heatmap_input.RData"")"

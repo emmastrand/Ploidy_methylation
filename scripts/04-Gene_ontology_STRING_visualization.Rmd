@@ -19,6 +19,7 @@ editor_options:
 
 ```{r}
 library(ggplot2)
+library(readr)
 library(tidyverse)
 library(Biostrings)
 library(strex)
@@ -27,129 +28,413 @@ library("ComplexHeatmap")
 library(gplots)
 library(RColorBrewer)
 library(ggh4x) ## for facet wrap options
+library(GSEABase)
+library(GO.db)
+library(biomaRt)
+library(writexl)
+library(readxl)
+library(ontologyIndex)
+library(ggbeeswarm)
 ```
+
+## Load GO information
+
+```{r}
+# load a GO slim set (e.g., generic GO slim)
+goslim <- get_ontology("http://current.geneontology.org/ontology/subsets/goslim_generic.obo")
+full_go <- get_ontology("http://purl.obolibrary.org/obo/go.obo", extract_tags = "everything")
+```
+
 
 ## Load data 
 
+Load above10 and below10 
+
 ```{r}
-cluster1 <- read.delim2("data/WGBS/GOenrich/Cluster1_enrichment_terms_0.7sim.tsv") %>% mutate(cluster="cluster1") #%>%
-  #subset(!X.category == "COMPARTMENTS") %>% subset(!X.category == "UniProt Keywords")
-cluster2 <- read.delim2("data/WGBS/GOenrich/Cluster2_enrichment_terms.tsv") %>% mutate(cluster="cluster2")# %>%
-  #subset(!X.category == "COMPARTMENTS") %>% subset(!X.category == "UniProt Keywords")
-cluster3 <- read.delim2("data/WGBS/GOenrich/Cluster3_enrichment_terms_0.7sim.tsv") %>% mutate(cluster="cluster3") #%>%
-  #subset(!X.category == "COMPARTMENTS") %>% subset(!X.category == "UniProt Keywords")
-cluster4 <- read.delim2("data/WGBS/GOenrich/Cluster4_enrichment_terms_0.7sim.tsv") %>% mutate(cluster="cluster4") #%>%
-  #subset(!X.category == "COMPARTMENTS") %>% subset(!X.category == "UniProt Keywords")
-cluster5 <- read.delim2("data/WGBS/GOenrich/Cluster5_enrichment_terms.tsv") %>% mutate(cluster="cluster5") #%>%
-  #subset(!X.category == "COMPARTMENTS") %>% subset(!X.category == "UniProt Keywords")
-cluster6 <- read.delim2("data/WGBS/GOenrich/Cluster6_enrichment_terms.tsv") %>% mutate(cluster="cluster6") #%>%
- #subset(!X.category == "COMPARTMENTS") %>% subset(!X.category == "UniProt Keywords")
+above10_path <- "data/WGBS/GOenrich/Above10/"
+below10_path <- "data/WGBS/GOenrich/below10/"
+
+# list all .tsv files with "terms" in the name
+above10_files <- list.files(
+  path = above10_path,
+  pattern = "terms.sim0.8*\\.tsv$",
+  full.names = TRUE
+)
+# list all .tsv files with "terms" in the name
+below10_files <- list.files(
+  path = below10_path,
+  pattern = "terms.sim0.8*\\.tsv$",
+  full.names = TRUE
+)
+
+df_above10 <- above10_files %>%
+  lapply(function(f) read_tsv(f) |> mutate(source = basename(f))) %>%
+  bind_rows()
+
+df_below10 <- below10_files %>%
+  lapply(function(f) read_tsv(f) |> mutate(source = basename(f))) %>%
+  bind_rows()
 ```
 
-## Group by pattern
+Merge into one df 
 
 ```{r}
-triploid <- full_join(cluster6, cluster2) %>% full_join(cluster5)
-diploid <- full_join(cluster4, cluster3) %>% full_join(cluster1)
-
-triploid <- triploid %>% dplyr::select(X.category, cluster, term.description, observed.gene.count,
-                                      background.gene.count, strength, signal, false.discovery.rate) %>%
-  mutate(false.discovery.rate = as.numeric(false.discovery.rate),
-         strength = as.numeric(strength),
-         signal = as.numeric(signal)
-         )  %>%
-  mutate(group = "triploid") %>%
-  mutate(X.category = case_when(
-    X.category == "GO Component" ~ "CC",
-    X.category == "GO Function" ~ "MF",
-    X.category == "GO Process" ~ "BP",
-    TRUE ~ X.category
-    ))
+df <- full_join(df_above10, df_below10) %>%
   
-
-diploid <- diploid %>% dplyr::select(X.category, cluster, term.description, observed.gene.count,
-                                      background.gene.count, strength, signal, false.discovery.rate) %>%
-    mutate(false.discovery.rate = as.numeric(false.discovery.rate),
+  ## renaming some categories
+  mutate(`#category` = case_when(
+      `#category` == "GO Component" ~ "CC",
+      `#category` == "GO Function" ~ "MF",
+      `#category` == "GO Process" ~ "BP",
+      `#category` == "COMPARTMENTS" ~ "CO",
+      `#category` == "InterPro" ~ "INT",
+      `#category` == "STRING clusters" ~ "STR",
+      `#category` == "UniProt Keywords" ~ "UNI",
+      `#category` == "Reactome" ~ "RE",
+      TRUE ~ `#category`
+      )) %>% 
+  
+  ## renaming the source for sampleID 
+  mutate(
+    cluster = str_before_nth(source, "_", 1),
+    direction = str_after_nth(source, "_", 1),
+    direction = str_before_nth(direction, "_", 1)
+  ) %>%
+  
+  ## changing columns to numeric 
+  mutate(`false discovery rate` = as.numeric(`false discovery rate`),
          strength = as.numeric(strength),
          signal = as.numeric(signal)
          ) %>%
-  mutate(group = "diploid") %>%
-    mutate(X.category = case_when(
-    X.category == "GO Component" ~ "CC",
-    X.category == "GO Function" ~ "MF",
-    X.category == "GO Process" ~ "BP",
-    TRUE ~ X.category
+  
+  ## calculate ratio
+  mutate(
+    ratio = `observed gene count` / `background gene count`
+  )
+
+head(df)
+```
+
+```{r}
+# goterms <- unique(df$`term ID`)
+# 
+# map_to_slim <- function(term) {
+#   # get ancestors
+#   anc <- full_go$ancestors[[term]]
+#   if (is.null(anc)) return(NULL)
+# 
+#   # find which ancestors are slim terms
+#   slim_hits <- intersect(anc, goslim$id)
+#   if (length(slim_hits) == 0) {
+#     return(data.frame(go = term, slim = NA, slim_name = NA))
+#   }
+# 
+#   data.frame(
+#     go = term,
+#     slim = slim_hits,
+#     slim_name = full_go$name[slim_hits],
+#     stringsAsFactors = FALSE
+#   )
+# }
+# 
+# slim_df <- do.call(rbind, lapply(goterms, map_to_slim))
+# 
+# slim_one <- slim_df %>%
+#   group_by(go) %>%
+#   summarize(
+#     slim_id   = if (all(is.na(slim))) NA_character_ else paste(unique(na.omit(slim)), collapse = ";"),
+#     slim_name = if (all(is.na(slim_name))) NA_character_ else paste(unique(na.omit(slim_name)), collapse = ";"),
+#     .groups = "drop"
+#   )
+```
+
+## Plot above 10 data 
+
+```{r}
+above10_trip <- df %>% subset(direction=="above10") %>%
+  subset(cluster=="Cluster4" | cluster=="Cluster1" | cluster=="Cluster6")
+
+above10_dip <- df %>% subset(direction=="above10") %>%
+  subset(cluster=="Cluster3" | cluster=="Cluster5" | cluster=="Cluster2")
+
+above10_trip_only_terms <- setdiff(above10_trip$`term ID`, above10_dip$`term ID`)
+above10_dip_only_terms <- setdiff(above10_dip$`term ID`, above10_trip$`term ID`)
+above10_shared_terms <- intersect(above10_trip$`term ID`, above10_dip$`term ID`)
+```
+
+## Plot below 10 data 
+
+```{r}
+below10_trip <- df %>% subset(direction=="below10") %>%
+  subset(cluster=="Cluster5" | cluster=="Cluster6" | cluster=="Cluster1")
+
+below10_dip <- df %>% subset(direction=="below10") %>%
+  subset(cluster=="Cluster2" | cluster=="Cluster4" | cluster=="Cluster3")
+
+below10_trip_only_terms <- setdiff(below10_trip$`term ID`, below10_dip$`term ID`)
+below10_dip_only_terms <- setdiff(below10_dip$`term ID`, below10_trip$`term ID`)
+below10_shared_terms <- intersect(below10_trip$`term ID`, below10_dip$`term ID`)
+```
+
+
+## Plot 
+
+```{r}
+df_to_plot <- df %>% 
+  subset(direction=="below10") %>% 
+  
+ # filter(`observed gene count` > 10) %>%
+  
+  filter(`term ID` %in% below10_shared_terms) %>%
+  
+  group_by(`#category`) %>%
+  mutate(`term description` = fct_reorder(`term description`, ratio)) %>%
+  ungroup() %>%
+  
+  subset(`#category` == "CC" | `#category` == "MF" | `#category` == "BP")
+
+
+below10_colors <- c("Cluster5"="#dec0f1", "Cluster6"="#b185db", "Cluster1"="#944bbb",
+            "Cluster2"="#ea698b",  "Cluster4"="#ff90b3", "Cluster3"="#f4acb7")
+
+above10_colors <- c("Cluster4"="#dec0f1",  "Cluster1"="#b185db", "Cluster6"="#944bbb",
+                    "Cluster3"="#ea698b", "Cluster5"="#ff90b3",  "Cluster2"="#f4acb7")
+
+colors_to_use <- below10_colors
+```
+
+
+```{r}
+df_to_plot %>%
+  ggplot(aes(x = log10(ratio), y = `term description`)) +
+  geom_point(aes(size=`observed gene count`,
+                 #fill=`false discovery rate`,
+                 fill=cluster,
+                 shape=cluster
+                 ),
+             alpha=0.85
+             ) +
+  scale_shape_manual(values = c(21, 22, 24,
+                                23, 25, 21
+                                )) +
+  scale_fill_manual(values = colors_to_use) + 
+  #scale_fill_gradient(low="#1e6091", high="#d9ed92") +
+  labs(
+    y = "",
+    x = "Log-normalized ratio",
+    fill = "Cluster",
+    size = "Gene Count",
+    shape = "Cluster"
+  ) +
+  facet_grid2(`#category` ~ ., scales="free", space="free") +
+  theme_bw() +
+  theme(
+    strip.text.x = element_text(color="black", face="bold", size=12),
+    strip.text.y = element_text(color="black", face="bold", size=12),
+    strip.background.y = element_blank(),
+    strip.clip = "off",
+    axis.text.y = element_text(size=10, color="black"),
+    axis.text.x = element_text(size=11, color="black"),
+    axis.title.y = element_text(margin = margin(r=10), size=13, face="bold"),
+    axis.title.x = element_text(margin = margin(t=10), size=13, face="bold")
+  )
+
+#ggsave("data/figures/Enrichment_shared_dip_only_sim08.png", width=7, height=4.5)
+#ggsave("data/figures/Enrichment_below10_dip_only_sim08.png", width=6.5, height=6.6)
+#ggsave("data/figures/Enrichment_below10_trip_only_sim08.png", width=7.5, height=3)
+
+#ggsave("data/figures/Enrichment_above10_shared_sim08.png", width=6.5, height=5.5)
+#ggsave("data/figures/Enrichment_above10_dip_only_sim08.png", width=8, height=12.5)
+#ggsave("data/figures/Enrichment_above10_trip_only_sim08.png", width=7.5, height=6)
+#ggsave("data/figures/Enrichment_above10_diploid.png", width=9, height=23)
+```
+
+
+
+```{r}
+df %>% relocate(c(direction,cluster), .before = `#category`) %>%
+  write_xlsx("data/WGBS/GOenrich/STRING_summary.xlsx")
+
+fxn_writing <- df %>% 
+  
+  subset(cluster=="Cluster4") %>% 
+  subset(direction=="above10") %>%
+  
+  subset(!`#category` == "CO") %>%
+  subset(!`#category` == "CC") %>%
+  
+  mutate(
+    bin = case_when(
+      str_detect(`term description`, regex("metabolic|metabolism", ignore_case = TRUE)) ~ "metabolism",
+      str_detect(`term description`, regex("transport", ignore_case = TRUE)) ~ "transport",
+      str_detect(`term description`, regex("localization", ignore_case = TRUE)) ~ "localization",
+      str_detect(`term description`, regex("organization", ignore_case = TRUE)) ~ "organization",
+      str_detect(`term description`, regex("biosynthetic", ignore_case = TRUE)) ~ "biosynthesis",
+      str_detect(`term description`, regex("transcription|gene expression", ignore_case = TRUE)) ~ "gene expression",
+      str_detect(`term description`, regex("catabolic|catabolism", ignore_case = TRUE)) ~ "catabolism",
+      str_detect(`term description`, regex("binding", ignore_case = TRUE)) ~ "binding",
+      TRUE ~ "other"
+    )
+  )
+
+location_writing <- df %>% 
+  
+  subset(cluster=="Cluster4") %>% 
+  subset(direction=="above10") %>% subset(`#category` == "CO" | `#category` == "CC")
+```
+
+Plot by category 
+
+```{r}
+subset_category <- df %>% 
+  
+  subset(direction == "above10") %>%
+  subset(`#category` == "CO" | `#category` == "CC") %>%
+  
+  # subset(!`#category` == "CO") %>%
+  # subset(!`#category` == "CC") %>%
+  
+  group_by(`#category`) %>%
+  mutate(`term description` = fct_reorder(`term description`, ratio)) %>%
+  ungroup() #%>%
+  
+  # mutate(
+  #   bin = case_when(
+  #     str_detect(`term description`, regex("metabolic|metabolism", ignore_case = TRUE)) ~ "metabolism",
+  #     str_detect(`term description`, regex("transport", ignore_case = TRUE)) ~ "transport",
+  #     str_detect(`term description`, regex("localization", ignore_case = TRUE)) ~ "localization",
+  #     str_detect(`term description`, regex("organization", ignore_case = TRUE)) ~ "organization",
+  #     str_detect(`term description`, regex("biosynthetic", ignore_case = TRUE)) ~ "biosynthesis",
+  #     str_detect(`term description`, regex("transcription|gene expression", ignore_case = TRUE)) ~ "gene expression",
+  #     str_detect(`term description`, regex("catabolic|catabolism", ignore_case = TRUE)) ~ "catabolism",
+  #     str_detect(`term description`, regex("binding", ignore_case = TRUE)) ~ "binding",
+  #     TRUE ~ "other"
+  #   )
+  # )
+
+
+sub_category_above_colors <- c(
+  c("Cluster4"= "olivedrab4", #"#dec0f1", 
+    "Cluster1"= "#3A8213", # "#b185db",
+    "Cluster6"= "darkgreen", # "#944bbb",
+    "Cluster3"=  "grey50", # "#ea698b", 
+    "Cluster5"= "skyblue3", # "#ff90b3", 
+    "Cluster2"= "skyblue3" # "#f4acb7"
     ))
+
+sub_category_below_colors <- c(
+  c("Cluster5"= "olivedrab4", #"#dec0f1", 
+    "Cluster6"= "#3A8213", # "#b185db",
+    "Cluster1"= "darkgreen", # "#944bbb",
+    "Cluster2"=  "grey50", # "#ea698b", 
+    "Cluster3"= "skyblue3", # "#ff90b3", 
+    "Cluster4"= "skyblue3" # "#f4acb7"
+    ))
+
+
+subset_category %>%
+  ggplot(aes(x = log10(ratio), y = `term description`)) +
+  geom_point(aes(size=(`observed gene count`), fill=cluster),
+             alpha=0.75, shape=21) +
+  scale_fill_manual(values = sub_category_above_colors) + 
+  #scale_fill_gradient(low="#1e6091", high="#d9ed92") +
+  labs(
+    y = "",
+    x = "Log-normalized ratio",
+    fill = "Cluster",
+    size = "Gene Count"
+    #shape = "Cluster"
+  ) +
+  facet_grid2(`#category` ~ ., scales="free", space="free") +
+  #facet_grid2(bin ~ ., scales="free", space="free") +
+  theme_bw() +
+  theme(
+    strip.text.x = element_text(color="black", face="bold", size=12),
+    strip.text.y = element_text(color="black", face="bold", size=12),
+    strip.background.y = element_blank(),
+    strip.clip = "off",
+    axis.text.y = element_text(size=10, color="black"),
+    axis.text.x = element_text(size=11, color="black"),
+    axis.title.y = element_text(margin = margin(r=10), size=13, face="bold"),
+    axis.title.x = element_text(margin = margin(t=10), size=13, face="bold")
+  )
+
+#ggsave("data/figures/Enrichment_below10_location.png", width=6.5, height=8)
+#ggsave("data/figures/Enrichment_below10_what.png", width=7.2, height=14)
+#ggsave("data/figures/Enrichment_above10_what.png", width=8, height=20)
+#ggsave("data/figures/Enrichment_above10_cat_BP.png", width=8, height=19)
+#ggsave("data/figures/Enrichment_above10_cat_CC.png", width=8, height=12)
+# ggsave("data/figures/Enrichment_above10_cat_MF.png", width=6, height=3)
 ```
 
 ```{r}
-triploid %>%
-  ggplot(., aes(x=signal, y=term.description)) +
-  geom_point(aes(size=observed.gene.count, fill=false.discovery.rate, shape=cluster), alpha=0.7) +
+fig3_subset <- df %>% subset(direction == "above10") %>% #subset(cluster=="Cluster3") %>%
+  #mutate(`term description` = fct_reorder(`term description`, `ratio`)) %>%
+  mutate(`term description` = fct_reorder(`term description`, `observed gene count`)) %>%
+  subset(!`#category` == "CO") %>%
+  subset(!`#category` == "CC") 
+
+# fig3_subset %>% write_xlsx("data/WGBS/GOenrich/Above10/Cluster_fig3_terms.xlsx")
+# fig3_subset_edited <- write_xlsx("data/WGBS/GOenrich/Above10/Cluster_fig3_terms_edited.xlsx")
+
+string_summary <- read_xlsx("data/WGBS/GOenrich/STRING_summary_edited.xlsx") %>% 
+  subset(direction == "above10") %>% subset(!`#category` == "CO") %>%
+  subset(!`#category` == "CC") 
+
+subset_summary <- fig3_subset %>%
+  left_join(., string_summary %>% dplyr::select(cluster, `term ID`, `term description`, group1, group2)) %>%
+    mutate(cluster = factor(cluster, levels = c("Cluster4", "Cluster1", "Cluster5",
+                                              "Cluster2", "Cluster3", "Cluster6"))) %>%
+
+  group_by(cluster, `#category`, group1, group2) %>% 
+  reframe(`observed gene count` = (`observed gene count`)) %>%
+  mutate(label = if_else(is.na(group2) | group2 == "", group1, group2)) %>%
+  arrange(`#category`, group1, group2, `observed gene count`) %>%
+  mutate(label = fct_inorder(label))
+
+subset_summary2 <- subset_summary %>% filter(!is.na(group2)) %>% 
+  dplyr::group_by(cluster, `#category`, group2) %>%
+  reframe(sum = (`observed gene count`)) %>%
+  arrange(`#category`, group2, sum) %>%
+  mutate(group2 = fct_inorder(group2))
+
+subset_summary2 %>% mutate(x="x") %>%
+  ggplot(aes(x = x, y = group2)) + #log10(ratio)
   
-  scale_shape_manual(values = c(21, 22, 24)) +
-  scale_fill_gradient(low="#1e6091", high="#d9ed92") +
-  
-  labs(
-    y = "",
-    x = "Signal",
-    fill = "FDR",
-    size = "Gene Count",
-    shape = "Cluster"
+  # geom_point(aes(size=(sum), fill=cluster), alpha=0.75, shape=21,
+  #            #position = position_jitter(width = 0.15,  height = 0)
+  #                         ) +
+  geom_quasirandom(
+    aes(size = sum, fill = cluster),
+    alpha = 0.75, shape = 21,
+    width = 0.35,        # horizontal spread
+    groupOnX = TRUE      # since x is constant
   ) +
   
-  facet_grid2(X.category ~ ., scales = "free", space = "free") +
-  theme_bw() +
-  theme(
-    ## facet wrap labels
-    strip.text.x = element_text(color = "black", face = "bold", size = 12),
-    strip.text.y = element_text(color = "black", face = "bold", size = 12),
-    strip.background.y = element_blank(),
-    strip.clip = "off",
-    
-    axis.text.y = element_text(size=11, color="black"),
-    axis.text.x = element_text(size=11, color="black"),
-    axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0), size=13, face="bold"),
-    axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0), size=13, face="bold")
-  )
-
-ggsave("data/figures/Triploidy_enrichment.png", width=9, height=5.5)
-```
-
-```{r}
-diploid %>%
-  ggplot(., aes(x=signal, y=term.description)) +
-  geom_point(aes(size=observed.gene.count, fill=false.discovery.rate, shape=cluster), alpha=0.7) +
-  
-  scale_shape_manual(values = c(21, 22, 24)) +
-  scale_fill_gradient(low="#1e6091", high="#d9ed92") +
-  
+  scale_fill_manual(values = sub_category_above_colors) + 
   labs(
     y = "",
-    x = "Signal",
-    fill = "FDR",
-    size = "Gene Count",
-    shape = "Cluster"
+    x = "",
+    fill = "Cluster",
+    size = "Gene Count"
   ) +
-  
-  facet_grid2(X.category ~ ., scales = "free", space = "free") +
+  scale_y_discrete(position = "right") +
+  facet_grid2(cluster ~ ., scales="free", space="free") +
   theme_bw() +
   theme(
-    ## facet wrap labels
-    strip.text.x = element_text(color = "black", face = "bold", size = 12),
-    strip.text.y = element_text(color = "black", face = "bold", size = 12),
+    strip.text.x = element_text(color="black", face="bold", size=12),
+    strip.text.y = element_text(color="black", face="bold", size=12),
+    strip.placement = "outside",
     strip.background.y = element_blank(),
     strip.clip = "off",
-    
-    axis.text.y = element_text(size=8, color="black"),
-    axis.text.x = element_text(size=11, color="black"),
-    axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0), size=13, face="bold"),
-    axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0), size=13, face="bold")
+    axis.text.y = element_text(size=10, color="black"),
+    axis.text.x = element_blank(),
+    axis.title.y = element_text(margin = margin(r=10), size=12, face="bold"),
+    axis.title.x = element_text(margin = margin(t=10), size=12, face="bold")
   )
 
-ggsave("data/figures/Diploid_enrichment.png", width=7, height=14)
+ggsave("data/figures/Enrichment_above10_bycluster_group2.png", width=5.75, height=10)
 ```
-
 
 
 

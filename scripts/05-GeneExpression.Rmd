@@ -51,6 +51,9 @@ library("pheatmap")
 library("magrittr")
 library("reshape2")
 library(readxl)
+library(ggh4x)        # advanced facetting
+library(ggpmisc)
+library(strex)
 ```
 
 ## Load data 
@@ -98,6 +101,8 @@ Pacuta_data_filt <- as.data.frame(Pacuta_matrix[which(rownames(Pacuta_matrix) %i
 nrow(Pacuta_matrix) #Before = 33,259
 nrow(Pacuta_data_filt) #After = 19,128 for ploidy 
 #Filtering removed 14,131 in ploidy analysis 
+
+Pacuta_data_filt %>% write.csv("data/gene expression/GE_Pacuta_data_filt.csv")
 ```
 
 In order for the DESeq2 algorithms to work, the SampleIDs on the treatmentinfo file and count matrices have to match exactly and in the same order. The following R clump will check to make sure that these match.
@@ -127,6 +132,15 @@ pacuta_forall <- Pacuta_data_filt %>%
 all_data_filt <- pacuta_forall %>% 
   spread(., Sample.ID, count) %>%
   column_to_rownames(., var="gene_id")
+
+## Run differential expression test using a Wald model. 
+DEG <- DESeq(Pacuta_gdds_dev) #run differential expression test by group using the Wald model
+#DEG.results <- results(DEG, contrast= c("treatment","HTAC","ATAC"),lfcThreshold=log2(1.5))
+
+res_T1_vs_D <- results(DEG, contrast=c("meth_exp_group","T1","D"))
+res_T2_vs_D <- results(DEG, contrast=c("meth_exp_group","T2","D"))
+res_T2_vs_T1 <- results(DEG, contrast=c("meth_exp_group","T2","T1"))
+
 ```
 
 #### Log-transform the count data
@@ -148,7 +162,39 @@ head(assay(Pacuta_gvst_dev), 3) #view transformed gene count data
 
 ## create data matrix 
 pacuta_counts <- as.data.frame(assay(Pacuta_gvst_dev)) 
+pacuta_counts %>% write.csv("data/gene expression/pacuta_counts_vst.csv")
+
+## for visualization = pacuta_counts
+## for stats = Pacuta_data_filt
 ```
+
+### PCoA for gene expression ploidy for Figure 1
+
+```{r}
+Pacuta_gvst_dev
+
+pcaData <- plotPCA(
+  Pacuta_gvst_dev,
+  intgroup = "meth_exp_group",
+  returnData = TRUE
+)
+
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+
+ggplot(pcaData, aes(
+  x = PC1,
+  y = PC2,
+  color = meth_exp_group
+)) +
+  scale_fill_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+  geom_point(size = 3, shape=21, alpha=0.7, color="black",aes(fill=meth_exp_group)) +
+  xlab(paste0("PC1: ", percentVar[1], "% variance")) +
+  ylab(paste0("PC2: ", percentVar[2], "% variance")) +
+  theme_bw()
+
+ggsave("data/figures/Gene_expression_total_PCA.png", width=5, height=3)
+```
+
 
 ## Gene expression counts and CV versus DNA methylation levels
 
@@ -210,7 +256,7 @@ comparison_summary2 %>%
   geom_point(alpha=0.2, size=0.75) + 
 
   labs(
-    y = "Gene expression",
+    y = "Gene expression (vst counts)",
     x = "Mean gene methylation (%)"
   )+
   
@@ -223,7 +269,7 @@ comparison_summary2 %>%
                                  max(comparison_summary2$count) + 0.14)) +
   
   ggtitle(
-    subtitle = paste0("ANOVA Methylation p<0.0001"),
+    subtitle = paste0("ANCOVA Methylation p<0.0001"),
     label = paste0("")
   ) +
   
@@ -254,38 +300,30 @@ summary(glht(ANOVA, linfct = mcp(meth_exp_group = "Tukey")))
 lm_model <- lm(inv_CV ~ meth_exp_group*per.meth, data = comparison_summary2)
 summary(lm_model)
 
+library(emmeans)
+emmeans(lm_model, pairwise ~ meth_exp_group, adjust = "tukey")
+
 ### figure with stats
 comparison_summary2 %>%
-  ggplot(., aes(x=per.meth, y=inv_CV, color=meth_exp_group)) + 
-  geom_point(alpha=0.2, size=0.75) + 
+  ggplot(aes(x = per.meth, y = inv_CV, color = meth_exp_group)) +
+  geom_point(alpha = 0.2, size = 0.75) +
+  stat_poly_line(formula = y ~ x, linewidth = 1) +
 
+stat_poly_eq(
+  aes(label = paste(..eq.label.., ..rr.label.., sep = "~~")),
+  formula = y ~ x,
+  parse = TRUE,
+  hjust = -1.1,
+  vjust = 1.1
+) +
+
+  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
   labs(
     y = "Gene expression (CV-1)",
     x = "Mean gene methylation (%)"
-  )+
-  
-  stat_poly_line(linewidth=1) +
-  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
-  stat_poly_eq(vjust=0.1, hjust=0.2) +
-  
-  # Add y-axis buffer of 0.2
-  # scale_y_continuous(limits = c(min(comparison_summary2$CV) - min(comparison_summary2$CV)*0.01,
-  #                                max(comparison_summary2$CV) + max(comparison_summary2$CV)*0.02)) +
-  
-  ggtitle(
-    label = paste0("ANOVA Methylation p<0.0001; Ploidy p<0.0001"),
-    subtitle = paste0("TUKEY POST-HOC D-T1 p=0.0001; D-T2 p < 0.0001; T1-T2 p<0.0001")
   ) +
-  
   theme_bw() +
-  theme(legend.position = "none",
-        axis.text.y = element_text(size=10, color="black"),
-        axis.text.x = element_text(size=10, color="black"),
-        plot.title = element_text(size=10, color="grey55", face = "italic"),
-        plot.subtitle = element_text(size=10, color="grey55", face = "italic"),
-        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0), size=11, face="bold"),
-        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0), size=11, face="bold")
-  )
+  theme(legend.position = "none")
 
 ggsave("data/figures/Fig4A_Methylation_CV.png", width = 5.5, height = 4.5)
 ```
@@ -321,7 +359,7 @@ comparison_summary2 %>%
   #                                max(comparison_summary2$CV) + max(comparison_summary2$CV)*0.02)) +
   
   ggtitle(
-    label = paste0("ANOVA count p<0.0001; ploidy; p<0.0001; count x ploidy p=0.048")
+    label = paste0("ANCOVA count p<0.0001; ploidy; p<0.0001; count x ploidy p=0.048")
     #subtitle = paste0("TUKEY POST-HOC ploidy no significance")
   ) +
   
@@ -346,18 +384,23 @@ Determining which epigenetic machinery genes have significantly different expres
 ```{r}
 ploidy_DEG_wfunction <- read.csv(file="data/gene expression/3-Pacu-group-DEG-GOenrichment-results.csv") 
 
-eggNOGG <- read.delim2("data/gene expression/Pocillopora_acuta_HIv2.genes.EggNog_results.txt") %>%
-  dplyr::select(gene = X.query, Description) %>%
-  filter(grepl("acetylase|methylase|methyltransferase|PHD|WD40|MBD|UHRF|Methylcytosine|S-adenosylmethionine|methionine synthase", 
-               Description, ignore.case = TRUE)) 
+# eggNOGG <- read.delim2("data/gene expression/Pocillopora_acuta_HIv2.genes.EggNog_results.txt") %>%
+#   dplyr::select(gene = X.query, Description) %>%
+#   filter(grepl("acetylase|methylase|methyltransferase|PHD|WD40|MBD|UHRF|Methylcytosine|S-adenosylmethionine|methionine synthase", 
+#                Description, ignore.case = TRUE)) 
+# 
+# ## 208 genes matching epigenetic machinery names
+# length(unique(eggNOGG$gene))
+# eggNOGG %>% write_xlsx("data/gene expression/archived_machinery/Epigenetic_machinery_genes.xlsx")
 
-## 208 genes matching epigenetic machinery names
-length(unique(eggNOGG$gene))
-eggNOGG %>% write_xlsx("data/metadata/Epigenetic_machinery_genes.xlsx")
+eggNOGG <- read_xlsx("data/gene expression/")
 
-epigenetic_machinery_genes <- left_join(eggNOGG, pacuta_counts %>% rownames_to_column(var="gene")) %>%
+epigenetic_machinery_genes <- left_join(eggNOGG, Pacuta_data_filt %>% rownames_to_column(var="gene")) %>%
   gather("Sample.ID", "count", 3:last_col()) %>% left_join(., meta, by = "Sample.ID") %>%
   group_by(Sample.ID) %>% filter(!is.na(count))
+
+epigenetic_machinery_genes %>% ungroup() %>% dplyr::select(gene, Description) %>% distinct() %>%
+  write_xlsx("data/gene expression/archived_machinery/Epigenetic_machinery_genes_list.xlsx")
 
 ## 191 / 208 genes we have data for 
 length(unique(epigenetic_machinery_genes$gene))
@@ -386,72 +429,85 @@ epigene_results_filtered <- epigene_results %>% distinct() %>%
   mutate_if(is.numeric, round, 8) %>% 
   mutate(sig = ifelse(pvalue < 0.050, "significant", "NS"))
 
-## genes with significantly different expression = 88 genes 
+## genes with significantly different expression = 63 genes 
 significant_genes = epigene_results_filtered %>% filter(pvalue < 0.050) %>% dplyr::select(gene)
 ```
 
 ```{r}
-distance_matrix_df <- significant_genes %>% 
-  left_join(., pacuta_counts %>% rownames_to_column(var="gene"), by = "gene") %>% 
-  column_to_rownames(var = "gene")
+# distance_matrix_df <- significant_genes %>% 
+#   left_join(., pacuta_counts %>% rownames_to_column(var="gene"), by = "gene") %>% 
+#   column_to_rownames(var = "gene")
+# 
+# # Assuming 'data' is your normalized gene expression matrix
+# dist_matrix <- dist((distance_matrix_df), method = "euclidean")  # Compute distance matrix
+# hclust_result <- hclust(dist_matrix, method = "complete")
+# #hc <- hclust(dist_matrix)
+# clusters <- cutree(hclust_result, k = 5)
+# 
+# # Create a heatmap with hierarchical clustering results
+# annotation_col <- meta %>% column_to_rownames(var = "Sample.ID") # Replace 'Group' with your actual metadata column
+# group_order<-c("D", "T1", "T2")
+# 
+# ordered_samples <- annotation_col[order(factor(annotation_col$meth_exp_group, levels = group_order)), , drop = FALSE]
+# ordered_indices <- match(rownames(ordered_samples), colnames(distance_matrix_df))
+# ordered_distance_matrix_df <- (distance_matrix_df[, ordered_indices])
+# 
+# # Create a color palette for annotations (optional)
+# ann_colors <- list(meth_exp_group = c(D = "skyblue3", T1 = "olivedrab4", T2 = "darkgreen")) 
+# 
+# # Generate heatmap with ordered columns
+# pdf("data/figures/Figure5_Heatmap_epigenes.pdf")
+# heatmap_output <- pheatmap(ordered_distance_matrix_df,
+#          scale = "row",                      
+#          clustering_distance_rows = "euclidean",  
+#          clustering_method = "complete",     
+#          color = colorRampPalette(c("navy", "white", "firebrick"))(50),  
+#          show_rownames = FALSE,               
+#          show_colnames = FALSE, 
+#          cluster_cols = FALSE,
+#          annotation_col = ordered_samples,
+#          annotation_colors = ann_colors,
+#          annotation_names_col = FALSE,
+#          gaps_col = c(15, 35),
+#          cutree_rows = 5)
+# dev.off()
+# 
+# row_order <- heatmap_output$tree_row$order
+# 
+# #Extract the cluster assignments:
+# cluster_assignments <- cutree(heatmap_output$tree_row, k = 5)
+# ordered_clusters <- cluster_assignments[row_order]
+# cluster_mapping <- setNames(seq_along(unique(ordered_clusters)), unique(ordered_clusters))
+# 
+# cluster_df <- data.frame(gene = names(cluster_assignments), 
+#                          cluster = cluster_mapping[as.character(cluster_assignments)]) %>%
+#   left_join(., eggNOGG %>% dplyr::select(gene, Description), by = "gene") %>%
+#   left_join(., ploidy_DEG_wfunction %>%
+#               separate_rows(genes, sep = ",") %>% dplyr::rename(gene = genes) %>%
+#               mutate(gene = gsub("KB", "", gene)),
+#             by = "gene"
+#             )
+# 
+# cluster_df %>% group_by(cluster) %>%
+#   reframe(counts = n_distinct(gene))
+# 
+# #cluster_df %>% subset(cluster == 1) %>% left_join(., epigene_results_summary, by = "gene")
+# 
+# cluster_df %>% write.csv("data/gene expression/Epigenetic_machinery_genes_heatmapclusters.csv", row.names = FALSE)
+cluster_df_annotated <- read_excel("data/gene expression/archived_machinery/Epigenetic_machinery_genes_heatmapclusters.xlsx")
+```
 
-# Assuming 'data' is your normalized gene expression matrix
-dist_matrix <- dist((distance_matrix_df), method = "euclidean")  # Compute distance matrix
-hclust_result <- hclust(dist_matrix, method = "complete")
-#hc <- hclust(dist_matrix)
-clusters <- cutree(hclust_result, k = 4)
+### Attempting to get log fold change 
 
-# Create a heatmap with hierarchical clustering results
-annotation_col <- meta %>% column_to_rownames(var = "Sample.ID") # Replace 'Group' with your actual metadata column
-group_order<-c("D", "T1", "T2")
+```{r}
+## epigenetic_machinery_genes
 
-ordered_samples <- annotation_col[order(factor(annotation_col$meth_exp_group, levels = group_order)), , drop = FALSE]
-ordered_indices <- match(rownames(ordered_samples), colnames(distance_matrix_df))
-ordered_distance_matrix_df <- (distance_matrix_df[, ordered_indices])
-
-# Create a color palette for annotations (optional)
-ann_colors <- list(meth_exp_group = c(D = "skyblue3", T1 = "olivedrab4", T2 = "darkgreen")) 
-
-# Generate heatmap with ordered columns
-pdf("data/figures/Figure5_Heatmap_epigenes.pdf")
-heatmap_output <- pheatmap(ordered_distance_matrix_df,
-         scale = "row",                      
-         clustering_distance_rows = "euclidean",  
-         clustering_method = "complete",     
-         color = colorRampPalette(c("navy", "white", "firebrick"))(50),  
-         show_rownames = FALSE,               
-         show_colnames = FALSE, 
-         cluster_cols = FALSE,
-         annotation_col = ordered_samples,
-         annotation_colors = ann_colors,
-         annotation_names_col = FALSE,
-         gaps_col = c(15, 35),
-         cutree_rows = 4)
-dev.off()
-
-row_order <- heatmap_output$tree_row$order
-
-#Extract the cluster assignments:
-cluster_assignments <- cutree(heatmap_output$tree_row, k = 4)
-ordered_clusters <- cluster_assignments[row_order]
-cluster_mapping <- setNames(seq_along(unique(ordered_clusters)), unique(ordered_clusters))
-
-cluster_df <- data.frame(gene = names(cluster_assignments), 
-                         cluster = cluster_mapping[as.character(cluster_assignments)]) %>%
-  left_join(., eggNOGG %>% dplyr::select(gene, Description), by = "gene") %>%
-  left_join(., ploidy_DEG_wfunction %>%
-              separate_rows(genes, sep = ",") %>% dplyr::rename(gene = genes) %>%
-              mutate(gene = gsub("KB", "", gene)),
-            by = "gene"
-            )
-
-cluster_df %>% group_by(cluster) %>%
-  reframe(counts = n_distinct(gene))
-
-#cluster_df %>% subset(cluster == 1) %>% left_join(., epigene_results_summary, by = "gene")
-
-cluster_df %>% write.csv("data/gene expression/Epigenetic_machinery_genes_heatmapclusters.csv", row.names = FALSE)
-cluster_df_annotated <- read_excel("data/gene expression/Epigenetic_machinery_genes_heatmapclusters.xlsx")
+# res_T1_vs_D_epi <- as.data.frame(res_T1_vs_D) %>% rownames_to_column(var = "gene") %>% 
+#   filter(pvalue > 0.050) %>% dplyr::select(gene, log2FoldChange) %>% mutate(direction="T1_D") %>%
+#   filter(gene %in% epigenetic_machinery_genes$gene) ## 122 genes 
+#   
+# res_T2_vs_D_epi <- res_T2_vs_D  
+# res_T2_vs_T1_epi <- res_T2_vs_T1  
 ```
 
 Trying heatmap from other script to confirm distance is up/down 
@@ -509,36 +565,36 @@ Trying heatmap from other script to confirm distance is up/down
 ### Boxplot prelim
 
 ```{r}
-# epigene_results_significant <- significant_genes %>% 
-#   left_join(., pacuta_counts %>% rownames_to_column(var="gene"), by = "gene") %>%
-#   gather("Sample.ID", "count", 2:last_col()) %>%
-#   left_join(., meta, by = "Sample.ID") %>%
-#   left_join(., eggNOGG %>% dplyr::select(gene, Description), by = "gene")
-# 
-# length(unique(epigene_results_significant$gene))
-# 
-# epigene_results_summary <- summarySE(epigene_results_significant, measurevar = c("count"), 
-#                                groupvars = c("gene", "meth_exp_group")) %>% dplyr::select(-N, -sd, -se, -ci) %>%
-#   spread(meth_exp_group, count) %>% left_join(., epigene_results_filtered, by = "gene") %>%
-#   left_join(., eggNOGG %>% dplyr::select(gene, Description), by = "gene")
-# 
-# epigene_results_summary %>% write_xlsx("data/Epigenetic_machinery_genes.xlsx")
-# 
-# epigene_annotated <- read_xlsx("data/Epigenetic_machinery_genes_annotated.xlsx")
-# 
+epigene_results_significant <- significant_genes %>%
+  left_join(., pacuta_counts %>% rownames_to_column(var="gene"), by = "gene") %>%
+  gather("Sample.ID", "count", 2:last_col()) %>%
+  left_join(., meta, by = "Sample.ID") %>%
+  left_join(., eggNOGG %>% dplyr::select(gene, Description), by = "gene")
+
+length(unique(epigene_results_significant$gene)) ## 63
+
+epigene_results_summary <- summarySE(epigene_results_significant, measurevar = c("count"),
+                               groupvars = c("gene", "meth_exp_group")) %>% dplyr::select(-N, -sd, -se, -ci) %>%
+  spread(meth_exp_group, count) %>% left_join(., epigene_results_filtered, by = "gene") %>%
+  left_join(., eggNOGG %>% dplyr::select(gene, Description), by = "gene")
+
+epigene_results_summary %>% write_xlsx("data/gene expression/archived_machinery/Epigenetic_machinery_genes.xlsx")
+
+#epigene_annotated <- read_xlsx("data/Epigenetic_machinery_genes_annotated.xlsx")
+
 # epigene_annotated %>% group_by(Pattern) %>%
 #   reframe(n_genes = n_distinct(gene))
 # 
 # epigene_annotated %>% dplyr::select(-pvalue, -`T1.D`, -`T2.D`, -`T2.T1`, -sig) %>%
-#   gather("group", "value", 2:4) %>% 
+#   gather("group", "value", 2:4) %>%
 #   ggplot(., aes(x=group, y=(value))) +
 #   labs(
 #     y="",
 #     x=""
 #   ) +
-#   geom_line(aes(group = gene), color = 'grey80', lty = "dotted") + 
+#   geom_line(aes(group = gene), color = 'grey80', lty = "dotted") +
 #   geom_point(width=0.2, aes(fill = group), size=1.5, color = 'black', shape=21, alpha=0.5) +
-#   
+# 
 #   facet_wrap(~Pattern, scales = "free") +
 #   scale_fill_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
 #   theme_bw() +
@@ -552,6 +608,188 @@ Trying heatmap from other script to confirm distance is up/down
 # ggsave("data/figures/Fig5_targetedGE_high.png", width = 5, height = 4)
 ```
 
+### Plotting by function 
+
+```{r}
+function_df <- #cluster_df %>% dplyr::select(gene, cluster) %>% distinct() %>% left_join(
+  epigene_results_summary %>% dplyr::select(gene, D, T1, T2, Description) %>%
+
+mutate(
+  bin = case_when(
+    str_detect(Description, regex("tRNA", ignore_case = TRUE)) ~ "tRNA methyltransferase",
+    str_detect(Description, regex("rRNA", ignore_case = TRUE)) ~ "rRNA methyltransferase",
+    str_detect(Description, regex("lysine.*methyltransferase", ignore_case = TRUE)) ~ "Histone methyltransferase",
+    str_detect(Description, regex("histone.*methyltransferase", ignore_case = TRUE)) ~ "Histone methyltransferase",
+    str_detect(Description, regex("histone.*deacetylase", ignore_case = TRUE)) ~ "Histone deacetylase",
+    str_detect(Description, regex("demethylase", ignore_case = TRUE)) ~ "Histone demethylase",
+    str_detect(Description, regex("WD40 repeats", ignore_case = TRUE)) ~ "WD40 repeats",
+    str_detect(Description, regex("PHD", ignore_case = TRUE)) ~ "PHD finger protein",
+
+    # Epitranscriptome
+    str_detect(Description, regex("mRNA", ignore_case = TRUE)) ~  "mRNA cap 0 methyltransferase",
+    str_detect(Description, regex("RsmB NOP family", ignore_case = TRUE)) ~  "RsmB NOP family",
+    str_detect(Description, regex("gTMT family", ignore_case = TRUE)) ~  "gTMT family",
+
+    # # SAM but explicitly NOT mRNA
+    # str_detect(Description, regex("S-adenosylmethionine from", ignore_case = TRUE)) &
+    #   !str_detect(Description, regex("mRNA", ignore_case = TRUE)) ~ 
+    #   "S-adenosylmethionine formation",
+
+    #str_detect(Description, regex("SAM-binding methyltransferase", ignore_case = TRUE)) ~ "SAM-binding methyltransferase",
+    str_detect(Description, regex("Homocysteine", ignore_case = TRUE)) ~ "Homocysteine S-methyltransferase",
+    
+    str_detect(Description, regex("protein-arginine", ignore_case = TRUE)) ~ 
+      "Protein arginine N- methyltransferase activity",
+    str_detect(Description, regex("Protein arginine", ignore_case = TRUE)) ~ 
+      "Protein arginine N- methyltransferase activity",
+    
+    str_detect(Description, regex("DNA.*methyltransferase", ignore_case = TRUE)) ~ "DNA methyltransferase",
+    str_detect(Description, regex("reader", ignore_case = TRUE)) ~ "DNA methylation reader",
+    str_detect(Description, regex("Arsenite", ignore_case = TRUE)) ~ "Arsenite methyltransferase",
+    str_detect(Description, regex("carnosine", ignore_case = TRUE)) ~ "Carnosine methyltransferase",
+    str_detect(Description, regex("Thiopurine", ignore_case = TRUE)) ~ "Thiopurine S-methyltransferase",
+    str_detect(Description, regex("carboxyl", ignore_case = TRUE)) ~ "Carboxyl methyltransferase",
+    str_detect(Description, regex("o-methyltransferase", ignore_case = TRUE)) ~ "O-methyltransferase",
+    str_detect(Description, regex("aminomethyltransferase", ignore_case = TRUE)) ~ "Aminomethyltransferase activity",
+    str_detect(Description, regex("^(?!.*histone).*deacetylase", ignore_case = TRUE)) ~ "Deacetylase",
+
+    TRUE ~ "methyltransferase"
+  )
+)
+
+
+length(unique(function_df$bin))
+```
+
+```{r}
+function_df %>% gather("ploidy", "value", 2:4) %>%
+  
+  ggplot(., aes(x=ploidy, y=value)) + 
+  geom_line(aes(group=gene), color="grey60", linetype = "dotted") +
+  geom_point(aes(fill=ploidy), shape=21, alpha=0.5, size=3) + 
+  
+  
+  scale_fill_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+  
+  facet_wrap(~bin, scales="free") +
+  
+  labs(
+    y=""
+  ) +
+  
+  theme_bw() +
+  theme(
+    legend.position = "none"
+  )
+
+ggsave("data/figures/GE_epigenetic_machinery_bins.png", width = 15, height = 12)
+```
+
+
+```{r}
+function_df %>% gather("ploidy", "value", 2:4) %>%
+  
+  subset(bin == "Histone methyltransferase") %>%
+  
+  ggplot(., aes(x=ploidy, y=value)) + 
+  geom_line(aes(group=gene), color="grey60", linetype = "dotted") +
+  geom_point(aes(fill=ploidy), shape=21, alpha=0.5, size=3) + 
+  
+  scale_fill_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+  facet_wrap(~bin, scales="free") +
+  
+  labs(
+    y=""
+  ) +
+  
+  theme_bw() +
+  theme(
+    legend.position = "none"
+  )
+
+ggsave("data/figures/GE_epigenetic_machinery_histone_meth.png", width = 5, height = 4)
+```
+
+Distance from diploid 
+
+```{r}
+sig_PH <- epigene_results_summary %>% left_join(., function_df %>% dplyr::select(gene, bin)) %>%
+  dplyr::select(gene, T1=T1.D, T2=T2.D, T2.T1, bin) %>%
+  gather("ploidy", "TPH", T1:T2.T1) %>%
+  filter(TPH < 0.050) 
+
+diploid_distance <- epigene_results_summary %>% left_join(., function_df %>% dplyr::select(gene, bin)) %>%
+  dplyr::select(gene, D, T1, T2) %>%
+  mutate(
+    T1 = T1-D,
+    T2 = T2-D
+  ) %>%
+  gather("ploidy", "distance", T1:T2) %>% dplyr::select(-D)
+
+diploid_distance %>% filter(distance > 0) %>% dplyr::select(gene) %>% distinct()
+```
+
+```{r}
+sig_PH %>%
+  left_join(diploid_distance) %>%
+  subset(!ploidy == "T2.T1") %>%
+  mutate(
+    bin_order = case_when(
+      ### histone mod
+      grepl("^histone", bin, ignore.case = TRUE) ~ 1,
+      ### deacetylase 
+      grepl("deacetylase", bin, ignore.case = TRUE) ~ 2,
+      
+      ### readers
+      grepl("methylation reader", bin, ignore.case = TRUE) ~ 3,
+      grepl("phd finger protein", bin, ignore.case = TRUE) ~ 4,
+      grepl("WD40 repeats", bin, ignore.case = TRUE) ~ 5,
+      
+      ### epitranscriptome
+      grepl("RsmB", bin, ignore.case = TRUE) ~ 6,
+      grepl("RNA meth", bin, ignore.case = TRUE) ~ 7,
+      grepl("mRNA", bin, ignore.case = TRUE) ~ 8,
+      
+      ## compound methylation
+      grepl("arsenite", bin, ignore.case = TRUE) ~ 9,
+      grepl("Thiopurine", bin, ignore.case = TRUE) ~ 10,
+      grepl("Carboxyl", bin, ignore.case = TRUE) ~ 11,
+      grepl("o-meth", bin, ignore.case = TRUE) ~ 12,
+      grepl("gTMT", bin, ignore.case = TRUE) ~ 13,
+      
+      ## methyltransferase
+      grepl("DNA meth", bin, ignore.case = TRUE) ~ 14,
+      
+      TRUE ~ 15,
+      
+    )
+  ) %>%
+  arrange(bin_order, bin) %>%
+  mutate(bin = fct_inorder(bin)) %>%
+  ggplot(aes(x = distance, y = gene)) +
+  geom_point(aes(fill = ploidy), size = 2, shape = 21, alpha = 0.65, color = "black") +
+  facet_grid2(
+    bin ~ .,
+    scales = "free",
+    space = "free",
+    labeller = labeller(bin = label_wrap_gen(width = 5))
+  ) +
+  ylab("") +
+  scale_fill_manual(values = c("olivedrab4", "darkgreen")) +
+  geom_vline(xintercept = 0, color = "grey60", lty = "dotted") +
+  theme_bw() +
+  theme(
+    axis.text.y = element_blank(),
+    legend.position = "none",
+    strip.text.x = element_text(face = "bold", size = 8),
+    strip.text.y = element_text(face = "bold", size = 8, angle = 0),
+    strip.background.y = element_blank(),
+    strip.clip = "off"
+  )
+
+ggsave("data/figures/GE_epigenetic_machinery_distance.png", height=12, width=3)
+```
+
 
 ## CO SEQ 
 
@@ -560,7 +798,6 @@ Using co-seq to find expressin pattern modules
 ```{r}
 # # if (!require("BiocManager", quietly = TRUE))
 # #     install.packages("BiocManager")
-# # 
 # # BiocManager::install("coseq")
 # library(coseq)
 # library(Biobase)
@@ -636,10 +873,89 @@ Counts library should be:
 #   facet_wrap(~cluster)
 ```
 
+## Target Epigenetic Machinery version 2 
 
+```{r}
+protein_categories <- read.csv("data/gene expression/fasta_headers.csv") %>%
+  mutate(header = str_before_nth(header, " p", 1)) %>%
+  dplyr::rename(category=1, protein=2)
 
+unique(protein_categories$category)
+```
+  
+```{r}
+## 473 hits of 499 queries 
+epigenes_blast <- read.delim2("data/gene expression/Pocillopora_acuta.tblastn_top_hits.tsv",
+                              header=F, col.names = c("protein", "gene", "pident", "length", "mismatch",
+                                                      "gapopen", "qstart", "qend", "sstart", "send", 
+                                                      "evalue", "bitscore", "sframe"))
 
+length(unique(epigenes_blast$gene)) ##327 unique genes 
 
+pacuta_means_df <- pacuta_counts %>% rownames_to_column(var = "gene") %>%
+  gather("Sample.ID", "count", 2:last_col()) %>%
+  left_join(., meta, by = "Sample.ID") %>%
+  filter(gene %in% epigenes_blast$gene)
+### 316 genes we have GE data for out of 327 unique that mapped to our queries
+
+pacuta_means_summary <- summarySE(pacuta_means_df, measurevar = c("count"),
+                               groupvars = c("gene", "meth_exp_group")) %>% 
+  dplyr::select(-N, -sd, -se, -ci) %>% 
+  spread(meth_exp_group, count) 
+```
+
+```{r}
+### running ANOVA loop on all genes in this df to see which ones have significant expression differences
+epigene_blast_results <- data.frame()
+
+for (i in pacuta_means_df$gene){
+  stats_subset <- pacuta_means_df %>% subset(gene==i)
+  aov <- aov(count ~ meth_exp_group, data=stats_subset) 
+  ANOVA <- Anova(aov, type = "III")
+  TUKEY <- TukeyHSD(aov)
+  
+  pvalue <- as.data.table(ANOVA)[2,4]
+  pvalue <- pvalue %>% dplyr::rename(pvalue = `Pr(>F)`)
+  
+  Tukeydf <- as.data.frame(TUKEY$meth_exp_group[,4]) %>% rownames_to_column(., "comparison") %>%
+              dplyr::rename(pvalue = `TUKEY$meth_exp_group[, 4]`) %>% spread(comparison, pvalue)
+  
+  DF <- data.frame(stats_subset[1,1], pvalue, Tukeydf)  
+  
+  epigene_blast_results <- rbind(epigene_blast_results, DF)
+  }
+
+epigene_blast_results_filtered <- epigene_blast_results %>% distinct() %>%
+  mutate_if(is.numeric, round, 8) %>% 
+  mutate(sig = ifelse(pvalue < 0.050, "significant", "NS"))
+
+## 112 genes out of 316 
+epigene_blast_results_significant <- epigene_blast_results_filtered %>% filter(sig=="significant") %>%
+  dplyr::rename(gene=1)
+
+epigene_blast_results_significant %>% dplyr::select(gene) %>% 
+  left_join(., epigenes_blast %>% dplyr::select(gene, protein)) %>%
+  write_xlsx("data/gene expression/proteins_to_annotate.xlsx")
+```
+
+```{r}
+epigenes_df <- pacuta_means_summary %>%
+  filter(gene %in% epigene_blast_results_significant$gene) %>%
+  left_join(., epigenes_blast %>% dplyr::select(gene, protein))
+  
+  
+  epigene_blast_results_significant %>% 
+  left_join(., pacuta_means_summary) %>% dplyr::select(protein, gene, D, T1, T2) %>%
+  dplyr::group_by(gene) %>%
+  summarise(
+        protein = paste(protein, collapse = ";"),
+    D = first(D),
+    T1 = first(T1),
+    T2 = first(T2),
+    .groups = "drop"
+  )  
+
+```
 
 
 

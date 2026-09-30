@@ -1,0 +1,5 @@
+"0","results_12S_tax %>% dplyr::select(Species_name:species) %>% write_xlsx(""../v2_post_subsample/results/Tax_breakdown.xlsx"")
+"
+"2","Error in write_xlsx(., ""../v2_post_subsample/results/Tax_breakdown.xlsx"") : 
+  could not find function ""write_xlsx""
+"

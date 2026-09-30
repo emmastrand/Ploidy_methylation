@@ -4,8 +4,8 @@ Number of permutations: 9999
 
 adonis2(formula = vegan_all ~ ploidy, data = pca_data_all, permutations = 9999, method = "eu")
          Df SumOfSqs      R2      F Pr(>F)    
-Model     1    25187 0.05369 2.7802  1e-04 ***
-Residual 49   443913 0.94631                  
+Model     1    26214 0.05588 2.9002  1e-04 ***
+Residual 49   442886 0.94412                  
 Total    50   469100 1.00000                  
 ---
-Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1

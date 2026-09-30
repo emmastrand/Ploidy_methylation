@@ -1,0 +1,4 @@
+"0","scaled_pca_all <-prcomp(All_data2[c(2:ncol(All_data2))], scale=FALSE, center=TRUE)"
+"0","scaled_pca_sig <-prcomp(All_data2sig[c(2:ncol(All_data2sig))], scale=FALSE, center=TRUE)"
+"0",""
+"0","fviz_eig(scaled_pca_all)"

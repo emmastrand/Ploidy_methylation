@@ -1,0 +1,5 @@
+"0",""
+"0","its2 <- read.delim2(""data/6_HoloInt1_20220706T084046.profiles.absolute.abund_and_meta.txt"","
+"0","                    sep = ""\t"", header = T, skip = 6) %>% dplyr::rename(sample_name = X) %>% "
+"0","  dplyr::select(-ITS2.type.profile)"
+"0","its2 <- its2[-c(256:257), ] #removing unnecessary rows"

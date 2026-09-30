@@ -91,8 +91,75 @@ meth_table5x_filtered_loc_filtered <- meth_table5x_filtered_loc %>%
 gene.stats.groups <- summarySE(meth_table5x_filtered_loc, 
                                measurevar = c("per.meth"), groupvars = c("Sample.ID", "meth_exp_group","loci_status"))
 
+gene.stats.groups.test <- summarySE(meth_table5x_filtered_loc, 
+                               measurevar = c("per.meth"), groupvars = c("Sample.ID", "meth_exp_group"))
+
 DMGs.stats.groups <- summarySE(meth_table5x_filtered_sigDMG_loc, 
                                measurevar = c("per.meth"), groupvars = c("Sample.ID", "meth_exp_group","loci_status"))
+```
+
+## Coverage differences 
+
+```{r}
+sample_counts <- meth_table5x_filtered %>%
+  distinct(meth_exp_group, Sample.ID) %>%
+  count(meth_exp_group, name = "n_samples")
+
+meth_table5x_filtered_loc %>% subset(Loc == "Pocillopora_acuta_HIv2___xfSc0000011_14881")
+
+depth <- meth_table5x_filtered_loc %>% dplyr::group_by(Sample.ID, meth_exp_group, Loc) %>%
+  reframe(
+    total = meth+unmeth
+  ) %>% left_join(sample_counts, by = "meth_exp_group")
+
+depth_sample <- depth %>% dplyr::group_by(Sample.ID, meth_exp_group) %>%
+  reframe(
+    mean_total = mean(total)
+  )
+
+depth %>%
+    ggplot(aes(x = total, fill = meth_exp_group)) +
+    geom_histogram(aes(weight = 1 / n_samples),
+                   bins = 50, position = "identity", alpha = 0.7) +
+    facet_grid(. ~ meth_exp_group, scales = "free_y") +
+    scale_fill_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+    labs(fill = "", y = "Count", x = "Total reads per loci (Depth)") +
+    theme_bw() +
+    theme(strip.text.x = element_text(size = 10, color = "black", face = "bold"),
+          strip.text.y = element_text(size = 10, color = "black", face = "bold"),
+          strip.background = element_rect(color = "black", fill = "white",
+                                          linewidth = 0.5, linetype = "solid"),
+          legend.position = "none",
+          #axis.text.x = element_blank(),
+          #axis.ticks.x = element_blank()
+          )
+
+ggsave("data/figures/Methylation_depth_loci.png", width=5, height=2)
+
+depth_sample %>%
+    ggplot(aes(x = meth_exp_group, y = mean_total, color = meth_exp_group)) +
+    geom_boxplot(outlier.shape = NA, size=0.75) +
+    geom_jitter(size = 3, alpha = 0.6, width=0.2) +
+    theme_bw() +
+  labs(
+    x = "",
+    y = "Mean depth per loci", 
+  ) + 
+
+    scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+    scale_y_continuous(expand = expansion(mult = c(0.2, 0.2))) +
+    theme(
+      axis.text.x = element_text(size = 14, color = "black"),
+      axis.text.y = element_text(size = 14, color = "black"),
+      strip.background = element_rect(color = "black", fill = "white", linewidth = 0.5, linetype = "solid"),
+      legend.position = "none",
+      legend.text = element_text(size = 14),
+      strip.text.x = element_text(size = 14, color = "black", face = "bold"),
+      #axis.title.x = element_text(margin = margin(t = 10), size = 14, face = "bold"),
+      axis.title.y = element_text(margin = margin(r = 10), size = 16),
+    )
+
+ggsave("data/figures/Methylation_depth_loci_sample.png", width=3, height=3)
 ```
 
 
@@ -145,11 +212,11 @@ DMGs.stats.groups <- summarySE(meth_table5x_filtered_sigDMG_loc,
 ```
 
 ```{r}
-##### without unmethylated 
 sample_counts <- meth_table5x_filtered %>%
   distinct(meth_exp_group, Sample.ID) %>%
   count(meth_exp_group, name = "n_samples")
 
+##### without unmethylated 
 meth_table5x_filtered %>%
   left_join(sample_counts, by = "meth_exp_group") %>%
   group_by(Loc) %>%
@@ -164,7 +231,7 @@ meth_table5x_filtered %>%
                    bins = 50, position = "identity", alpha = 0.7) +
     facet_grid(bin ~ meth_exp_group, scales = "free") +
     scale_fill_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
-    labs(fill = "", y = "Number of loci per sample", x = "DNA methylation level (%)") +
+    labs(fill = "", y = "Number of CpGs per sample", x = "CpG methylation level (%)") +
     theme_bw() +
     theme(strip.text.x = element_text(size = 10, color = "black", face = "bold"),
           strip.text.y = element_text(size = 10, color = "black", face = "bold"),
@@ -235,7 +302,7 @@ gene.stats.groups %>%
     theme_bw() +
   labs(
     x = "",
-    y = "DNA methylation level (%)", 
+    y = "CpG methylation level (%)", 
   ) + 
 
     scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
@@ -254,6 +321,35 @@ gene.stats.groups %>%
 
 ggsave("data/figures/Methylation_patterns_avg.png", width=3, height=5)
 ```
+
+```{r}
+gene.stats.groups.test %>%
+  subset(!meth_exp_group == "ungroup") %>%
+    ggplot(aes(x = meth_exp_group, y = per.meth, color = meth_exp_group)) +
+    geom_boxplot(outlier.shape = NA, size=0.75) +
+    geom_jitter(size = 3, alpha = 0.6, width=0.2) +
+    theme_bw() +
+  labs(
+    x = "",
+    y = "DNA methylation level (%)", 
+  ) + 
+
+    scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+    scale_y_continuous(expand = expansion(mult = c(0.2, 0.2))) +
+    theme(
+      axis.text.x = element_text(size = 14, color = "black"),
+      axis.text.y = element_text(size = 14, color = "black"),
+      strip.background = element_rect(color = "black", fill = "white", linewidth = 0.5, linetype = "solid"),
+      legend.position = "none",
+      legend.text = element_text(size = 14),
+      strip.text.x = element_text(size = 14, color = "black", face = "bold"),
+      #axis.title.x = element_text(margin = margin(t = 10), size = 14, face = "bold"),
+      axis.title.y = element_text(margin = margin(r = 10), size = 16),
+      
+    )
+```
+
+
 
 
 ```{r}
@@ -494,22 +590,23 @@ pca_data_all <- pca_data_all %>% left_join(., meth_group_list, by = "Sample.ID")
 Plotting by ploidy 
 
 ```{r}
-ploidy_pca <- ggplot(pca_data_all, aes(PCA1, PCA2, color=meth_exp_group)) + #, label=Sample.ID
-  geom_point(size = 4, aes(shape = ploidy)) +
-  scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+ploidy_pca <- ggplot(pca_data_all, aes(PCA1, PCA2, fill=meth_exp_group)) + #, label=Sample.ID
+  geom_point(size = 4, shape=21, alpha=0.9) + #aes(shape = ploidy), 
+  scale_fill_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
   theme_bw()+
-  scale_shape_manual(values=c(21, 17)) +
+  #scale_shape_manual(values=c(21, 21)) + #, 17
   ylab(paste("PCA2:", percentage_all[2], "%")) +
   xlab(paste("PCA1:", percentage_all[1], "%")) +
-  labs(color = "Group", shape = "Ploidy") +
+  labs(fill = "Group" #, shape = "Ploidy"
+       ) +
   theme(legend.text = element_text(size=12), 
         legend.position="right",
         plot.background = element_blank(),
         legend.title = element_text(size=12), 
         plot.margin = margin(1, 1, 1, 1, "cm"),
         axis.text = element_text(size=12),
-        axis.title.x = element_text(margin = margin(t=10,r=0,b=0,l=0), size=12, face="bold"),
-        axis.title.y = element_text(margin = margin(t=0,r=5,b=0,l=0), size=12, face="bold"))
+        axis.title.x = element_text(margin = margin(t=10,r=0,b=0,l=0), size=12),
+        axis.title.y = element_text(margin = margin(t=0,r=5,b=0,l=0), size=12))
 ```
 
 Plot by environmental 
@@ -528,8 +625,8 @@ treatment_pca <- ggplot(pca_data_all, aes(PCA1, PCA2, color=Treatment)) +
         legend.title = element_text(size=12), 
         plot.margin = margin(1, 1, 1, 1, "cm"),
         axis.text = element_text(size=12),
-        axis.title.x = element_text(margin = margin(t=10,r=0,b=0,l=0), size=12, face="bold"),
-        axis.title.y = element_text(margin = margin(t=0,r=10,b=0,l=0), size=12, face="bold"))
+        axis.title.x = element_text(margin = margin(t=10,r=0,b=0,l=0), size=12),
+        axis.title.y = element_text(margin = margin(t=0,r=10,b=0,l=0), size=12))
 ```
 
 Plotting altogether for Figure 2

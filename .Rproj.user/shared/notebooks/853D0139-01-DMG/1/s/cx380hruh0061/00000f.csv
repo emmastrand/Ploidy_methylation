@@ -1,0 +1,5 @@
+"0","## adjusting p-values"
+"0","results_filtered$adj_pvalue <- p.adjust(results_filtered$pvalue, method='BH')"
+"0",""
+"0","## filtering to p-values above 0.05 = 3,692"
+"0","results_filtered_significant <- results_filtered %>% filter(adj_pvalue <= 0.050)"

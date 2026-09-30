@@ -1,0 +1,2 @@
+"0","meth_table5x_filtered_loc_0_10 <- meth_table5x_filtered_loc %>% subset(loci_status == ""unmethylated"")"
+"0","meth_table5x_filtered_loc_10_100 <- meth_table5x_filtered_loc %>% subset(loci_status == ""methylated"")"

@@ -36,6 +36,9 @@ raw <- read.csv("data/Molecular_fragments_color.csv", colClasses=c("Plug_ID"="ch
 
 range(raw$ColorScore)
 
+meta <- read.csv("data/metadata/meth_pattern_groups.csv") %>% dplyr::select(-X) %>%
+  mutate(Plug_ID = as.character(Sample.ID)) 
+
 stats <- summarySE(raw, measurevar = c("ColorScore"), groupvars = c("Species", "Date", "Treatment"))
 ```
 
@@ -98,40 +101,42 @@ ggsave(file="data/figures/Figure 1 Color_Pacuta.png", width = 7, height = 5, uni
 #   geom_jitter(alpha=0.7, size=4, width = 0.15) + theme_classic() + 
 #   scale_shape_manual(values=c(1, 2, 17)) +
 #   scale_colour_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) 
-# 
-# stats2 <- pacuta_raw %>% 
-#   left_join(., ploidy_meta, by=c("Plug_ID")) %>%
-#     filter(!meth_exp_group == "ungroup")
-# 
-# summary(aov(ColorScore ~ meth_exp_group, data=stats2))
-# 
-# pacuta_raw$Color.Transformed <- pacuta_raw$ColorScore+100
-# range(pacuta_raw$Color.Transformed)
-# hist(pacuta_raw$Color.Transformed)
-# 
-# pacuta_raw2 <- pacuta_raw %>%
-#   mutate(Temperature = 
-#            case_when(
-#              Treatment == "ATAC" ~ "Ambient",
-#              Treatment == "ATHC" ~ "Ambient",
-#              Treatment == "HTAC" ~ "High",
-#              Treatment == "HTHC" ~ "High"
-#            )) %>%
-#   mutate(CO2 = 
-#            case_when(
-#              Treatment == "ATAC" ~ "Ambient",
-#              Treatment == "ATHC" ~ "High",
-#              Treatment == "HTAC" ~ "Ambient",
-#              Treatment == "HTHC" ~ "High"
-#            ))
-# 
-# stats3 <- lm(log10(Color.Transformed) ~ Timepoint*Temperature*CO2, 
-#                na.action=na.omit, data=pacuta_raw2)
-# 
-# qqPlot(residuals(stats3)) 
-# hist(residuals(stats3))
-# 
-# stats3.anova <- Anova(stats3, ddf="lme4", type='III')
+
+
+stats2 <- pacuta_raw %>%
+  left_join(., meta, by=c("Plug_ID")) %>%
+    filter(!meth_exp_group == "ungroup")
+
+summary(aov(ColorScore ~ meth_exp_group, data=stats2))
+
+
+pacuta_raw$Color.Transformed <- pacuta_raw$ColorScore+100
+range(pacuta_raw$Color.Transformed)
+hist(pacuta_raw$Color.Transformed)
+
+pacuta_raw2 <- pacuta_raw %>%
+  mutate(Temperature =
+           case_when(
+             Treatment == "ATAC" ~ "Ambient",
+             Treatment == "ATHC" ~ "Ambient",
+             Treatment == "HTAC" ~ "High",
+             Treatment == "HTHC" ~ "High"
+           )) %>%
+  mutate(CO2 =
+           case_when(
+             Treatment == "ATAC" ~ "Ambient",
+             Treatment == "ATHC" ~ "High",
+             Treatment == "HTAC" ~ "Ambient",
+             Treatment == "HTHC" ~ "High"
+           ))
+
+stats3 <- lm(log10(Color.Transformed) ~ Timepoint*Temperature*CO2,
+               na.action=na.omit, data=pacuta_raw2)
+
+qqPlot(residuals(stats3))
+hist(residuals(stats3))
+
+stats3.anova <- Anova(stats3, ddf="lme4", type='III')
 ```
 
 

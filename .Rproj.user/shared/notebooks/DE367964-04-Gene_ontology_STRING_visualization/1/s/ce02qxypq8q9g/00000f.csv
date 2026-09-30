@@ -1,0 +1,3 @@
+"0","# load a GO slim set (e.g., generic GO slim)"
+"0","goslim <- get_ontology(""http://current.geneontology.org/ontology/subsets/goslim_generic.obo"")"
+"0","full_go <- get_ontology(""http://purl.obolibrary.org/obo/go.obo"", extract_tags = ""everything"")"

@@ -1,0 +1,5 @@
+"0","sample_counts <- meth_table5x_filtered %>%"
+"0","  distinct(meth_exp_group, Sample.ID) %>%"
+"0","  count(meth_exp_group, name = ""n_samples"")"
+"0",""
+"0","meth_table5x_filtered_loc %>% subset(Loc == ""Pocillopora_acuta_HIv2___xfSc0000011_14881"")"

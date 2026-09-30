@@ -1,0 +1,5 @@
+"0",""
+"0","ggsave(""../figures/Categories_relative_abundance.png"", width = 7, height = 3)"
+"2","Error in deparse(expr = object, width.cutoff = width.cutoff, nlines = nlines) : 
+  'S4SXP': should not happen - please report
+"

@@ -1,0 +1,8 @@
+"0","# create named vector: names = old, values = new"
+"0","# new ID, old ID "
+"0","map <- setNames(meta$`Sample ID`, meta$`GMGI Sample ID`)"
+"0",""
+"0","# replace only matching headers"
+"0","names(ASV_table_collapsed)[names(ASV_table_collapsed) %in% names(map)] <- map[names(ASV_table_collapsed)[names(ASV_table_collapsed) %in% names(map)]]"
+"0",""
+"0","names(ASV_table_filtered)[names(ASV_table_filtered) %in% names(map)] <- map[names(ASV_table_filtered)[names(ASV_table_filtered) %in% names(map)]]"

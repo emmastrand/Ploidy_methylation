@@ -1,0 +1,141 @@
+---
+title: "05-Gene_ontology_w_gff"
+output: html_document
+date: "2025-11-25"
+---
+
+Load libraries 
+
+```{r}
+library(ggplot2)
+library(readr)
+library(tidyverse)
+library(readxl)
+library(ggh4x) ## for facet wrap options
+```
+
+Load data 
+
+```{r}
+COG_categories <- read_xlsx("data/COG_annotations.xlsx")
+gff <- read.delim2("data/gene expression/Pocillopora_acuta_HIv2.genes.EggNog_results.txt") %>% 
+  dplyr::rename(
+    gene = X.query
+  ) %>% 
+  
+  ## add COG category
+  mutate(COG_category = na_if(COG_category, "-"))
+
+COG_gff <- gff %>%  
+  mutate(
+    COG_letter   = strsplit(COG_category, "")               # list-column of letters
+  ) %>%
+  unnest_longer(COG_letter) %>% 
+  full_join(., COG_categories) 
+
+above10 <- read.csv("data/WGBS/GOenrich/Above10/Gene_cluster_list.csv") %>% left_join(., COG_gff, by = "gene")
+below10 <- read.csv("data/WGBS/GOenrich/Below10/Gene_cluster_list.csv") %>% left_join(., COG_gff, by = "gene")
+
+unique(above10$Category_name)
+```
+
+Above 10
+
+```{r}
+## cluster1 = 92 annotated / 116 genes (79.31%)
+## 
+
+above10 %>% filter(!is.na(seed_ortholog)) %>%
+  dplyr::group_by(cluster, COG_letter, Category_name, Category_bin) %>%
+  reframe(count = n_distinct(gene)) %>%
+  
+  filter(!is.na(COG_letter)) %>%
+  filter(!Category_bin=="Poorly characterized") %>%
+  
+  mutate(cluster = factor(cluster, levels = c("Cluster 4", "Cluster 1", "Cluster 5", 
+                                              "Cluster 2", "Cluster 3", "Cluster 6"))) %>%
+  
+  ggplot(., aes(x=cluster, y=Category_name)) + 
+  geom_point(aes(size = count, fill=cluster), alpha=0.6, shape=21) +
+  
+  labs(
+    y = ""
+  ) +
+  
+  facet_grid2(Category_bin ~ ., scales="free", space="free") +
+  
+  scale_fill_manual(values = c("Cluster 4"= "olivedrab4", #"#dec0f1", 
+                                "Cluster 1"= "#3A8213", # "#b185db",
+                                "Cluster 6"= "darkgreen", # "#944bbb",
+                                "Cluster 3"=  "grey50", # "#ea698b", 
+                                "Cluster 5"= "skyblue3", # "#ff90b3", 
+                                "Cluster 2"= "skyblue3" # "#f4acb7")
+                     )) +
+  theme_bw() +
+  theme(
+    strip.text.x = element_text(color="black", face="bold", size=12),
+    strip.text.y = element_text(color="black", face="bold", size=12),
+    strip.background.y = element_blank(),
+    strip.clip = "off",
+    axis.text.y = element_text(size=10, color="black"),
+    axis.text.x = element_text(size=11, color="black", angle=45, hjust=1),
+    axis.title.y = element_text(margin = margin(r=10), size=13, face="bold"),
+    axis.title.x = element_text(margin = margin(t=10), size=13, face="bold")
+  )
+
+ggsave("data/figures/Enrichment_Above10_COG.png", width=7, height=6)
+```
+
+Below 10
+
+```{r}
+## cluster1 = 92 annotated / 116 genes (79.31%)
+## 
+
+below10 %>% filter(!is.na(seed_ortholog)) %>%
+  dplyr::group_by(cluster, COG_letter, Category_name, Category_bin) %>%
+  reframe(count = n_distinct(gene)) %>%
+  
+  filter(!is.na(COG_letter)) %>%
+  filter(!Category_bin=="Poorly characterized") %>%
+  
+  mutate(cluster = factor(cluster, levels = c("Cluster 5", "Cluster 6", "Cluster 1", 
+                                              "Cluster 3", "Cluster 4", "Cluster 2"))) %>%
+  
+  ggplot(., aes(x=cluster, y=Category_name)) + 
+  geom_point(aes(size = count, fill=cluster), alpha=0.6, shape=21) +
+  
+  labs(
+    y = ""
+  ) +
+  
+  facet_grid2(Category_bin ~ ., scales="free", space="free") +
+  
+  scale_fill_manual(values = c("Cluster 5"=  "olivedrab4", # "#dec0f1", 
+                                "Cluster 6"=  "#3A8213" ,  # "#b185db",
+                                "Cluster 1"=  "darkgreen",  # "#944bbb",
+                                "Cluster 2"=  "grey50", # "#ea698b", 
+                                "Cluster 4"= "skyblue3",  # "#ff90b3", 
+                                "Cluster 3"=   "skyblue3" #"#f4acb7")
+                     
+                     )) +
+  theme_bw() +
+  theme(
+    strip.text.x = element_text(color="black", face="bold", size=12),
+    strip.text.y = element_text(color="black", face="bold", size=12),
+    strip.background.y = element_blank(),
+    strip.clip = "off",
+    axis.text.y = element_text(size=10, color="black"),
+    axis.text.x = element_text(size=11, color="black"),
+    axis.title.y = element_text(margin = margin(r=10), size=13, face="bold"),
+    axis.title.x = element_text(margin = margin(t=10), size=13, face="bold")
+  )
+
+ggsave("data/figures/Enrichment_Below10_COG.png", width=7, height=7)
+```
+
+
+```{r}
+above10 %>% subset(Category_name)
+```
+

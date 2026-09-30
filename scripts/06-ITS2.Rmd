@@ -98,7 +98,7 @@ otu_normalized <- otu_normalized %>% rownames_to_column(var = "Sample.ID") %>%
     strip.background.y = element_blank() 
   )
 
-ggsave("data/figures/Supplemental Figure 5 ITS2.png", width=10, height=4)
+ggsave("data/figures/__Supplemental Figure 7 ITS2.png", width=9, height=3)
 ```
 
 

@@ -111,6 +111,23 @@ meta <- dplyr::left_join(meta, ploidyinfo, by="Sample.ID")
 save(meta, file = "data/metadata/meta.RData")
 ```
 
+```{r}
+meta %>% filter(!is.na(treesplit)) %>% 
+  dplyr::group_by(treesplit, Timepoint) %>%
+  reframe(count=n_distinct(Sample.ID)) %>%
+  subset(Timepoint == "30 hour" | Timepoint == "2 week" | Timepoint == "4 week" | 
+           Timepoint == "8 week" | Timepoint == "12 week"
+         ) %>%
+  
+ggplot(., aes(x=Timepoint, y=count)) +
+  geom_point(aes(fill=treesplit, shape=treesplit), size=4, color='black', alpha=0.6) +
+  scale_fill_manual(values = c("skyblue3", "olivedrab4", "darkgreen")) +
+  scale_shape_manual(values=c(21, 24, 24)) +
+  theme_bw()
+```
+
+
+
 ### Merge dataframes together
 
 ```{r}
@@ -190,6 +207,7 @@ meth_table5x_filtered <- meth_table5x[meth_table5x$sample_gene %in% meth_table5x
 ### Number of genes after filtering ## 9,382 genes 
 length(unique(meth_table5x_filtered$gene))
 
+meth_table5x_filtered <- meth_table5x_filtered %>% distinct()
 save(meth_table5x_filtered, file = "data/WGBS/meth_table5x_filtered.RData")
 ```
 
@@ -447,6 +465,8 @@ length(unique(meth_table5x_filtered_sigDMG_median0$gene))
 
 
 ```{r}
+meth_table5x_filtered_sigDMG <- meth_table5x_filtered_sigDMG %>% distinct()
+
 save(meth_table5x_filtered_sigDMG, file="data/WGBS/meth_table5x_filtered_sigDMG.RData")
 save(meth_table5x_filtered_sigDMG_median0, file = "data/WGBS/meth_table5x_filtered_sigDMG_median0.RData")
 ```

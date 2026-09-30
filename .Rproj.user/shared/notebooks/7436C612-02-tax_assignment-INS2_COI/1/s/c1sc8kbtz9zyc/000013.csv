@@ -1,0 +1,6 @@
+"0",""
+"0","ASV_table_collapsed %>%"
+"0","  filter(!is.na(Species_name)) %>% "
+"0","  group_by(Species_name) %>%"
+"0","  filter(n() > 1) %>%"
+"0","  ungroup() "

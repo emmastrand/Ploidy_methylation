@@ -1,0 +1,1430 @@
+words
+membrane
+response to unfolded protein
+endoplasmic reticulum
+endoplasmic reticulum membrane
+protein binding
+ubiquitin protein ligase binding
+ERAD pathway
+methyltransferase activity
+RNA binding
+cytoplasm
+nucleus
+tRNA processing
+methylation
+nucleoplasm
+tRNA modification
+tRNA methylation
+tRNA methyltransferase activity
+tRNA (cytidine-5-)-methyltransferase activity
+response to amphetamine
+tRNA stabilization
+ubiquitin-dependent protein catabolic process
+cullin-RING ubiquitin ligase complex
+protein ubiquitination
+spermatogenesis
+ubiquitin protein ligase activity
+DNA repair
+rhythmic process
+ribosome biogenesis
+proteasome-mediated ubiquitin-dependent protein catabolic process
+DNA damage response
+positive regulation of protein catabolic process
+G1/S transition of mitotic cell cycle
+T cell activation
+intrinsic apoptotic signaling pathway
+Cul4-RING E3 ubiquitin ligase complex
+cellular response to UV
+ubiquitin-dependent protein catabolic process via the C-end degron rule pathway
+Cul4A-RING E3 ubiquitin ligase complex
+ubiquitin ligase complex scaffold activity
+in utero embryonic development
+cell population proliferation
+positive regulation of cell population proliferation
+hemopoiesis
+negative regulation of granulocyte differentiation
+somatic stem cell population maintenance
+regulation of protein metabolic process
+positive regulation of G1/S transition of mitotic cell cycle
+regulation of DNA damage checkpoint
+regulation of nucleotide-excision repair
+nucleic acid binding
+mRNA transport
+nuclear membrane
+cytosol
+acyltransferase activity
+protein transport
+chromosome
+immune system process
+histone binding
+protein-containing complex
+nuclear pore
+nuclear envelope
+histone acetyltransferase activity
+chromatin binding
+transcription export complex 2
+mRNA export from nucleus
+nuclear pore nuclear basket
+histone H3 acetyltransferase activity
+somatic hypermutation of immunoglobulin genes
+poly(A)+ mRNA export from nucleus
+nucleosome organization
+regulation of DNA-templated transcription
+DNA-templated transcription
+chromatin organization
+chromatin remodeling
+PML body
+negative regulation of DNA-templated transcription
+chromatin
+extracellular exosome
+transcription corepressor activity
+regulation of transcription by RNA polymerase II
+anatomical structure morphogenesis
+nucleosome binding
+nucleosome assembly
+RNA polymerase II-specific DNA-binding transcription factor binding
+osteoblast differentiation
+gastrulation
+muscle cell differentiation
+HIR complex
+mitochondrion
+"catalytic activity, acting on a nucleic acid"
+mitochondrial matrix
+RNA methyltransferase activity
+S-adenosylmethionine-dependent methyltransferase activity
+regulation of RNA splicing
+"negative regulation of gene expression, epigenetic"
+mRNA modification
+RNA N6-methyladenosine methyltransferase complex
+regulation of mitochondrial transcription
+oxidoreductase complex
+snRNA (adenine-N6)-methylation
+site-specific DNA-methyltransferase (adenine-specific) activity
+U2 snRNA 2'-O-methyladenosine m6 methyltransferase activity
+regulation of mitochondrial DNA replication
+metal ion binding
+lyase activity
+regulation of translation
+dioxygenase activity
+tRNA binding
+positive chemotaxis
+2-oxoglutarate-dependent dioxygenase activity
+class I DNA-(apurinic or apyrimidinic site) endonuclease activity
+ferrous iron binding
+regulation of translational initiation
+regulation of translational elongation
+regulation of mitochondrial translation
+oxidative RNA demethylase activity
+broad specificity oxidative DNA demethylase activity
+chemoattractant activity
+DNA N6-methyladenine demethylase activity
+tRNA demethylase activity
+neuron migration
+placenta development
+tRNA wobble cytosine modification
+regulation of gene expression
+cell differentiation
+neuron projection development
+oxidative RNA demethylation
+RNA repair
+negative regulation of neuron apoptotic process
+developmental growth
+"positive regulation of gene expression, epigenetic"
+regulation of translational initiation by tRNA modification
+euchromatin
+ATP binding
+protein kinase activity
+protein phosphorylation
+microtubule cytoskeleton organization
+mitotic cell cycle
+meiotic cell cycle
+mitotic spindle organization
+centrosome cycle
+mitotic centrosome separation
+meiotic spindle organization
+plasma membrane
+protein serine/threonine kinase activity
+cell division
+cytoskeleton
+centrosome
+microtubule
+basolateral plasma membrane
+cilium
+mitotic spindle
+centriole
+protein serine kinase activity
+cell projection organization
+neuron projection
+midbody
+protein kinase binding
+spindle
+positive regulation of mitochondrial fission
+spindle pole
+protein serine/threonine/tyrosine kinase activity
+negative regulation of gene expression
+ciliary basal body
+regulation of protein stability
+regulation of signal transduction by p53 class mediator
+perinuclear region of cytoplasm
+protein autophosphorylation
+mitotic spindle pole
+negative regulation of protein binding
+molecular function activator activity
+peptidyl-serine phosphorylation
+positive regulation of mitotic nuclear division
+response to wounding
+liver regeneration
+spindle microtubule
+histone H3S10 kinase activity
+protein heterodimerization activity
+G2/M transition of mitotic cell cycle
+apoptotic process
+spindle organization
+spindle assembly involved in female meiosis I
+anterior/posterior axis specification
+regulation of G2/M transition of mitotic cell cycle
+positive regulation of proteasomal ubiquitin-dependent protein catabolic process
+regulation of cytokinesis
+negative regulation of apoptotic process
+positive regulation of mitotic cell cycle
+regulation of centrosome cycle
+centrosome localization
+cilium disassembly
+protein localization to centrosome
+positive regulation of oocyte maturation
+neuron projection extension
+kinetochore
+spindle pole centrosome
+spindle midzone
+microtubule organizing center
+postsynaptic density
+microtubule cytoskeleton
+germinal vesicle
+axon hillock
+pronucleus
+meiotic spindle
+glutamatergic synapse
+chromosome passenger complex
+DNA binding
+structural constituent of chromatin
+nucleosome
+intracellular organelle
+positive regulation of transcription by RNA polymerase II
+RNA polymerase II cis-regulatory region sequence-specific DNA binding
+nucleosomal DNA binding
+heterochromatin formation
+heterochromatin
+chromatin DNA binding
+cellular response to estradiol stimulus
+RNA polymerase II core promoter sequence-specific DNA binding
+cysteine-type deubiquitinase activity
+protein deubiquitination
+cysteine-type endopeptidase activity
+cysteine-type peptidase activity
+proteolysis
+cellular_component
+deubiquitinase activity
+catalytic activity
+nuclear body
+identical protein binding
+BMP signaling pathway
+transforming growth factor beta receptor signaling pathway
+negative regulation of transforming growth factor beta receptor signaling pathway
+SMAD binding
+monoubiquitinated protein deubiquitination
+transcription elongation-coupled chromatin remodeling
+transforming growth factor beta receptor binding
+negative regulation of antifungal innate immune response
+ubiquitin-modified histone reader activity
+protein K27-linked deubiquitination
+K48-linked deubiquitinase activity
+positive regulation of RIG-I signaling pathway
+regulation of intrinsic apoptotic signaling pathway in response to osmotic stress by p53 class mediator
+ubiquitin-protein transferase activity
+transferase activity
+nucleolus
+positive regulation of DNA-templated transcription
+protein polyubiquitination
+mRNA 3'-UTR binding
+negative regulation of cell migration
+transcription coactivator activity
+ubiquitin ligase complex
+p53 binding
+HULC complex
+histone H2B C-terminal K residue ubiquitin ligase activity
+peptidase activity
+"chromosome, centromeric region"
+"condensed chromosome, centromeric region"
+negative regulation of transcription by RNA polymerase II
+positive regulation of microtubule depolymerization
+negative regulation of cytokinesis
+negative regulation of cGAS/STING signaling pathway
+negative regulation of innate immune response
+protein localization to kinetochore
+mitotic cytokinesis
+positive regulation of cytokinesis
+positive regulation of telomere maintenance
+mitotic spindle midzone assembly
+positive regulation of mitotic cell cycle spindle assembly checkpoint
+mitotic spindle assembly
+positive regulation of mitotic sister chromatid separation
+positive regulation of attachment of mitotic spindle microtubules to kinetochore
+positive regulation of mitotic cytokinesis
+kinase binding
+regulation of chromosome segregation
+cell cycle G2/M phase transition
+post-translational protein modification
+positive regulation of mitotic sister chromatid segregation
+repair of mitotic kinetochore microtubule attachment defect
+negative regulation of B cell apoptotic process
+abscission
+cleavage furrow formation
+mitotic cytokinesis checkpoint signaling
+positive regulation of lateral attachment of mitotic spindle microtubules to kinetochore
+mitotic sister chromatid biorientation
+chromocenter
+mitotic spindle midzone
+protein sumoylation
+SUMO activating enzyme activity
+ubiquitin-like modifier activating enzyme activity
+magnesium ion binding
+positive regulation of protein sumoylation
+small protein activating enzyme binding
+SUMO binding
+SUMO activating enzyme complex
+ubiquitin-like protein conjugating enzyme binding
+mitochondrial outer membrane
+mitochondrial fusion
+peroxisomal membrane
+autophagy of mitochondrion
+protein K11-linked deubiquitination
+protein K6-linked deubiquitination
+pexophagy
+negative regulation of mitophagy
+zinc ion binding
+peptide-lysine-N-acetyltransferase activity
+regulation of DNA replication
+N-acetyltransferase activity
+acetyltransferase activity
+sister chromatid cohesion
+peptidyl-lysine acetylation
+mitotic sister chromatid cohesion
+post-translational protein acetylation
+RNA methylation
+mRNA processing
+extracellular region
+regulation of stem cell differentiation
+mRNA (cytidine-5-)-methyltransferase activity
+spermatid development
+regulation of mRNA export from nucleus
+meiotic cell cycle checkpoint signaling
+hair follicle maturation
+chromatoid body
+S-adenosylmethionine biosynthetic process
+rRNA base methylation
+mRNA destabilization
+mRNA catabolic process
+RNA stem-loop binding
+post-transcriptional regulation of gene expression
+"regulation of mRNA splicing, via spliceosome"
+mRNA m(6)A methyltransferase activity
+U6 snRNA 3'-end binding
+23S rRNA (adenine(1618)-N(6))-methyltransferase activity
+U6 snRNA (adenine-(43)-N(6))-methyltransferase activity
+negative regulation of 3'-UTR-mediated mRNA stabilization
+kinase activity
+Golgi apparatus
+regulation of primary metabolic process
+double-strand break repair
+regulation of macromolecule metabolic process
+regulation of cellular response to stress
+DNA damage checkpoint signaling
+replication fork processing
+"chromosome, telomeric region"
+replicative senescence
+DNA replication
+mitotic G2/M transition checkpoint
+positive regulation of telomere maintenance via telomerase
+telomere maintenance
+regulation of cellular response to heat
+site of DNA damage
+negative regulation of DNA replication
+"protein localization to chromosome, telomeric region"
+regulation of double-strand break repair
+response to mechanical stimulus
+"positive regulation of DNA damage response, signal transduction by p53 class mediator"
+nuclear membrane disassembly
+histone H2AXS139 kinase activity
+cellular response to gamma radiation
+establishment of RNA localization to telomere
+establishment of protein-containing complex localization to telomere
+positive regulation of telomerase catalytic core complex assembly
+MutLalpha complex binding
+MutSalpha complex binding
+nucleobase-containing compound metabolic process
+response to xenobiotic stimulus
+interstrand cross-link repair
+response to arsenic-containing substance
+ATR-ATRIP complex
+"acyltransferase activity, transferring groups other than amino-acyl groups"
+fatty acid metabolic process
+lipid metabolic process
+fatty acid beta-oxidation
+acetyl-CoA C-acetyltransferase activity
+base-excision repair
+SCF ubiquitin ligase complex
+positive regulation of cell growth
+negative regulation of cysteine-type endopeptidase activity involved in apoptotic process
+positive regulation of canonical Wnt signaling pathway
+negative regulation of G2/M transition of mitotic cell cycle
+WD40-repeat domain binding
+intrinsic apoptotic signaling pathway in response to DNA damage
+negative regulation of intrinsic apoptotic signaling pathway in response to DNA damage
+regulation of DNA repair
+response to UV
+skeletal system development
+positive regulation of receptor signaling pathway via JAK-STAT
+positive regulation of error-prone translesion synthesis
+tRNA (cytidine) methyltransferase activity
+tRNA metabolic process
+tRNA (cytidine-3-)-methyltransferase activity
+molecular_function
+biological_process
+molecular adaptor activity
+MAP kinase activity
+positive regulation of gene expression
+synapse
+response to oxidative stress
+MAPK cascade
+cellular response to mechanical stimulus
+positive regulation of NLRP3 inflammasome complex assembly
+cellular response to oxidative stress
+positive regulation of apoptotic process
+protein phosphatase binding
+energy homeostasis
+axon
+cellular response to reactive oxygen species
+regulation of circadian rhythm
+enzyme binding
+Fc-epsilon receptor signaling pathway
+cellular senescence
+peptidyl-threonine phosphorylation
+cellular response to cadmium ion
+regulation of macroautophagy
+histone deacetylase binding
+JNK cascade
+regulation of protein localization
+cellular response to lipopolysaccharide
+positive regulation of establishment of protein localization to mitochondrion
+basal dendrite
+cellular response to amino acid starvation
+positive regulation of cyclase activity
+stress-activated MAPK cascade
+JUN phosphorylation
+JUN kinase activity
+histone deacetylase regulator activity
+protein serine/threonine kinase binding
+positive regulation of cell killing
+positive regulation of protein metabolic process
+metallopeptidase activity
+metal-dependent deubiquitinase activity
+K63-linked deubiquitinase activity
+protein K63-linked deubiquitination
+endosome
+positive regulation of TORC1 signaling
+cellular response to L-leucine
+protein catabolic process
+ubiquitin-dependent protein catabolic process via the N-end rule pathway
+reciprocal meiotic recombination
+positive regulation of T cell receptor signaling pathway
+retrotransposon silencing
+protein K63-linked ubiquitination
+negative regulation of TOR signaling
+L-leucine binding
+male meiotic nuclear division
+histone H2A ubiquitin ligase activity
+male meiosis I
+nuclear speck
+inflammatory response to wounding
+positive regulation of macrophage derived foam cell differentiation
+positive regulation of cytokine production involved in inflammatory response
+positive regulation of protein ubiquitination
+response to cadmium ion
+modulation of chemical synaptic transmission
+protein localization to tricellular tight junction
+positive regulation of podosome assembly
+apoptotic signaling pathway
+positive regulation of apoptotic signaling pathway
+Schaffer collateral - CA1 synapse
+mitochondrial membrane
+aspartate family amino acid metabolic process
+aspartate N-acetyltransferase activity
+intracellular membrane-bounded organelle
+motile cilium
+sperm flagellum
+negative regulation of proteasomal ubiquitin-dependent protein catabolic process
+regulation of androgen receptor signaling pathway
+transcription corepressor binding
+lysosome
+lysosomal membrane
+negative regulation of TORC1 signaling
+nuclear matrix
+protein quality control for misfolded or incompletely synthesized proteins
+nervous system development
+chemical synaptic transmission
+positive regulation of ERAD pathway
+positive regulation of ubiquitin-dependent protein catabolic process
+cellular response to heat
+regulation of cell-substrate adhesion
+actin cytoskeleton organization
+intermediate filament cytoskeleton organization
+ATPase binding
+nucleotide-excision repair
+protein K48-linked deubiquitination
+cellular response to misfolded protein
+protein localization to cytosolic proteasome complex
+nuclear inclusion body
+negative regulation of type I interferon-mediated signaling pathway
+regulation of inflammatory response
+antiviral innate immune response
+ISG15-specific peptidase activity
+response to bacterium
+response to stilbenoid
+endoplasmic reticulum-Golgi intermediate compartment
+endoplasmic reticulum-Golgi intermediate compartment membrane
+glutathione metabolic process
+amyloid fibril formation
+"lysine N-acetyltransferase activity, acting on acetyl phosphate as donor"
+cysteine-S-conjugate N-acetyltransferase activity
+peptidyl-lysine N6-acetylation
+protein homodimerization activity
+protein tyrosine kinase activity
+histone H2AXY142 kinase activity
+WICH complex
+non-membrane spanning protein tyrosine kinase activity
+positive regulation of transcription by RNA polymerase I
+positive regulation of transcription by RNA polymerase III
+B-WICH complex
+nuclear replication fork
+negative regulation of mitotic chromosome condensation
+pericentric heterochromatin
+histone kinase activity
+condensed chromosome
+pseudouridine synthase activity
+pseudouridine synthesis
+RNA modification
+RNA splicing
+isomerase activity
+rRNA processing
+positive regulation of mitochondrial translation
+ribonucleoprotein granule
+mRNA pseudouridine synthesis
+tRNA pseudouridine synthase activity
+mitochondrial ribosomal large subunit rRNA binding
+mitochondrial tRNA pseudouridine synthesis
+positive regulation of DNA replication
+establishment of cell polarity
+neuron projection morphogenesis
+negative regulation of G1/S transition of mitotic cell cycle
+Golgi membrane
+circadian regulation of gene expression
+Golgi organization
+secretory granule lumen
+ficolin-1-rich granule lumen
+positive regulation of protein targeting to mitochondrion
+protein monoubiquitination
+membrane fusion
+negative regulation of mitochondrial fusion
+histone ubiquitin ligase activity
+positive regulation of mitophagy in response to mitochondrial depolarization
+protein modification process
+regulation of cell cycle
+regulation of cell growth
+negative regulation of cell population proliferation
+histone H2A deubiquitinase activity
+PR-DUB complex
+tissue homeostasis
+thrombocyte differentiation
+gene expression
+erythrocyte differentiation
+neutrophil differentiation
+granulocyte differentiation
+myeloid cell apoptotic process
+common myeloid progenitor cell proliferation
+platelet morphogenesis
+erythrocyte maturation
+nucleate erythrocyte differentiation
+hematopoietic stem cell homeostasis
+macrophage homeostasis
+neuron cellular homeostasis
+leukocyte proliferation
+regulation of cytokine production involved in inflammatory response
+regulation protein catabolic process at presynapse
+negative regulation of ubiquitin-dependent protein catabolic process
+ubiquitin binding
+endocytosis
+G protein-coupled receptor binding
+positive regulation of autophagy
+negative regulation of canonical NF-kappaB signal transduction
+regulation of G protein-coupled receptor signaling pathway
+protein localization to cell surface
+negative regulation of protein ubiquitination
+spliceosomal tri-snRNP complex assembly
+adenosine receptor binding
+"regulation of synaptic transmission, GABAergic"
+behavioral fear response
+adult feeding behavior
+behavioral response to ethanol
+righting reflex
+hexosyltransferase activity
+dolichol-linked oligosaccharide biosynthetic process
+glycosyltransferase activity
+N-acetylglucosaminyldiphosphodolichol N-acetylglucosaminyltransferase activity
+protein N-linked glycosylation
+autophagy
+protein stabilization
+regulation of autophagy
+BAT3 complex binding
+protein-folding chaperone binding
+melanocyte differentiation
+maintenance of unfolded protein
+ubiquitin-like protein ligase binding
+protein K29-linked deubiquitination
+proteasome binding
+positive regulation of cell migration
+cell-cell adhesion
+positive regulation of endocytosis
+negative regulation of cell adhesion
+regulation of cell adhesion
+rRNA methylation
+mitochondrial large ribosomal subunit
+tRNA wobble base cytosine methylation
+regulation of apoptotic process
+transcription factor binding
+negative regulation of cell cycle
+intrinsic apoptotic signaling pathway by p53 class mediator
+mitotic spindle assembly checkpoint signaling
+chromosome segregation
+"meiotic sister chromatid cohesion, centromeric"
+outer kinetochore
+histone H2A kinase activity
+regulation of sister chromatid cohesion
+"positive regulation of maintenance of mitotic sister chromatid cohesion, centromeric"
+innate immune response
+negative regulation of toll-like receptor signaling pathway
+negative regulation of interleukin-1-mediated signaling pathway
+DNA alkylation repair
+regulation of protein K48-linked deubiquitination
+"mRNA splicing, via spliceosome"
+mRNA binding
+stem cell population maintenance
+forebrain radial glial cell differentiation
+gliogenesis
+negative regulation of hematopoietic progenitor cell differentiation
+positive regulation of translation
+regulation of neuron differentiation
+mRNA stabilization
+MAP kinase kinase kinase activity
+positive regulation of ERK1 and ERK2 cascade
+intracellular signal transduction
+JUN kinase kinase kinase activity
+protein serine/threonine kinase activator activity
+positive regulation of JUN kinase activity
+positive regulation of protein kinase activity
+negative regulation of motor neuron apoptotic process
+growth cone
+"protein localization to chromosome, centromeric region"
+histone H3T3 kinase activity
+negative regulation of gluconeogenesis
+negative regulation of NF-kappaB transcription factor activity
+regulation of DNA-binding transcription factor activity
+"regulation of retrograde transport, endosome to Golgi"
+transcription-coupled nucleotide-excision repair
+negative regulation of gene expression via chromosomal CpG island methylation
+symbiont-mediated disruption of host cell PML body
+regulation of establishment of protein localization to telomere
+regulation of telomere capping
+deNEDDylase activity
+macrophage migration inhibitory factor binding
+protein deneddylation
+synaptic vesicle
+COP9 signalosome
+cytoplasmic vesicle
+translational initiation
+translation
+positive regulation of DNA-binding transcription factor activity
+regulation of JNK cascade
+translation initiation factor activity
+regulation of IRE1-mediated unfolded protein response
+protein neddylation
+regulation of protein neddylation
+exosomal secretion
+eukaryotic translation initiation factor 3 complex
+late endosome
+early endosome
+focal adhesion
+MAP kinase kinase activity
+spindle pole body
+regulation of stress-activated MAPK cascade
+regulation of Golgi inheritance
+regulation of early endosome to late endosome transport
+positive regulation of protein serine/threonine kinase activity
+heart development
+Schwann cell development
+cerebellar cortex formation
+neuron differentiation
+keratinocyte differentiation
+thyroid gland development
+endodermal cell differentiation
+ERBB2-ERBB3 signaling pathway
+myelination
+positive regulation of MAPK cascade
+type B pancreatic cell proliferation
+insulin-like growth factor receptor signaling pathway
+thymus development
+regulation of axon regeneration
+cell motility
+positive regulation of axonogenesis
+Bergmann glial cell differentiation
+face development
+lung morphogenesis
+trachea formation
+epithelial cell proliferation involved in lung morphogenesis
+placenta blood vessel development
+labyrinthine layer development
+ERK1 and ERK2 cascade
+positive regulation of endodermal cell differentiation
+chemotaxis
+signal transduction
+scaffold protein binding
+protein kinase activator activity
+MAP-kinase scaffold activity
+muscle organ development
+circadian behavior
+cyclin binding
+entrainment of circadian clock by photoperiod
+locomotor rhythm
+mitochondrial nucleoid
+tRNA (guanosine(9)-N1)-methyltransferase activity
+tRNA (adenine(9)-N1)-methyltransferase activity
+mitochondrial tRNA 5'-end processing
+mitochondrial ribonuclease P complex
+mitochondrial RNA 5'-end processing
+mitochondrial tRNA methylation
+mitochondrial tRNA processing
+mitochondrial tRNA 3'-end processing
+tRNA methyltransferase complex
+Notch signaling pathway
+defense response to virus
+early endosome membrane
+protein autoubiquitination
+protein K48-linked ubiquitination
+endosome to lysosome transport
+enzyme inhibitor activity
+positive regulation of defense response to virus by host
+DNA repair-dependent chromatin remodeling
+positive regulation of protein binding
+positive regulation of protein localization to nucleus
+positive regulation of protein localization to early endosome
+STAT family protein binding
+positive regulation of chromatin binding
+protein ADP-ribosyltransferase-substrate adaptor activity
+histone H4K91 ubiquitin ligase activity
+negative regulation of ubiquitin-protein transferase activity
+positive regulation of receptor catabolic process
+enzyme-directed rRNA pseudouridine synthesis
+cerebral cortex development
+establishment of mitotic spindle orientation
+bone development
+regulation of chromosome condensation
+neuronal stem cell population maintenance
+RNA processing
+ribosomal large subunit biogenesis
+maturation of LSU-rRNA
+rRNA (cytosine-C5-)-methyltransferase activity
+ribosomal large subunit assembly
+negative regulation of macromolecule biosynthetic process
+"regulation of alternative mRNA splicing, via spliceosome"
+dosage compensation by inactivation of X chromosome
+regulation of megakaryocyte differentiation
+thrombopoietin-mediated signaling pathway
+branching involved in blood vessel morphogenesis
+positive regulation of transcription of Notch receptor target
+negative regulation of myeloid cell differentiation
+spleen development
+ventricular septum morphogenesis
+sequence-specific DNA binding
+endonuclease activity
+V(D)J recombination
+DNA recombination
+immune response
+adaptive immune response
+B cell differentiation
+pre-B cell allelic exclusion
+double-stranded DNA endonuclease activity
+visual learning
+T cell differentiation in thymus
+T cell homeostasis
+regulation of T cell differentiation
+positive regulation of T cell differentiation
+negative regulation of T cell apoptotic process
+negative regulation of thymocyte apoptotic process
+regulation of behavioral fear response
+DNA recombinase complex
+endodeoxyribonuclease complex
+rRNA metabolic process
+rRNA acetylation involved in maturation of SSU-rRNA
+ribosomal small subunit biogenesis
+small-subunit processome
+telomerase holoenzyme complex
+protein acetylation
+regulation of centrosome duplication
+negative regulation of telomere maintenance via telomerase
+DNA polymerase binding
+rRNA modification
+tRNA N-acetyltransferase activity
+mRNA N-acetyltransferase activity
+rRNA cytidine N-acetyltransferase activity
+tRNA acetylation
+double-strand break repair via nonhomologous end joining
+DNA-dependent protein kinase activity
+positive regulation of double-strand break repair via nonhomologous end joining
+activation of innate immune response
+transcription regulator complex
+negative regulation of protein phosphorylation
+protein domain specific binding
+cellular response to insulin stimulus
+U3 snoRNA binding
+protein-DNA complex
+positive regulation of erythrocyte differentiation
+double-stranded DNA binding
+positive regulation of lymphocyte differentiation
+regulation of smooth muscle cell proliferation
+DNA-dependent protein kinase-DNA ligase 4 complex
+DNA-dependent protein kinase complex
+nonhomologous end joining complex
+small-subunit processome assembly
+immunoglobulin V(D)J recombination
+mitotic G1 DNA damage checkpoint signaling
+regulation of hematopoietic stem cell differentiation
+maturation of 5.8S rRNA
+somitogenesis
+B cell lineage commitment
+immature B cell differentiation
+pro-B cell differentiation
+T cell lineage commitment
+brain development
+response to ionizing radiation
+response to gamma radiation
+telomere capping
+lymphocyte differentiation
+protein destabilization
+T cell receptor V(D)J recombination
+ectopic germ cell programmed cell death
+regulation of epithelial cell proliferation
+double-strand break repair via alternative nonhomologous end joining
+positive regulation of platelet formation
+positive regulation of type I interferon-mediated signaling pathway
+cell junction
+hematopoietic progenitor cell differentiation
+protein localization to chromatin
+XY body
+site of double-strand break
+mitotic G2 DNA damage checkpoint signaling
+positive regulation of DNA repair
+BRCA1-A complex
+fatty acid biosynthetic process
+protein K6-linked ubiquitination
+BRCA1-BARD1 complex
+positive regulation of angiogenesis
+tubulin binding
+transcription cis-regulatory region binding
+ribonucleoprotein complex
+double-strand break repair via homologous recombination
+negative regulation of extrinsic apoptotic signaling pathway via death domain receptors
+RNA polymerase binding
+homologous recombination
+DNA strand resection involved in replication fork processing
+BRCA1-C complex
+negative regulation of fatty acid biosynthetic process
+negative regulation of centriole replication
+positive regulation of vascular endothelial growth factor production
+cellular response to tumor necrosis factor
+cellular response to indole-3-methanol
+intracellular non-membrane-bounded organelle
+DNA-binding transcription activator activity
+damaged DNA binding
+postreplication repair
+sex-chromosome dosage compensation
+negative regulation of cell growth
+negative regulation of intracellular estrogen receptor signaling pathway
+chordate embryonic development
+random inactivation of X chromosome
+cellular response to ionizing radiation
+negative regulation of reactive oxygen species metabolic process
+condensed nuclear chromosome
+lateral element
+male germ cell nucleus
+nuclear ubiquitin ligase complex
+gamma-tubulin ring complex
+BRCA1-B complex
+DNA repair complex
+histone H4 acetyltransferase activity
+peptide alpha-N-acetyltransferase activity
+N-terminal protein amino acid acetylation
+NatA complex
+"mitotic sister chromatid cohesion, centromeric"
+establishment of mitotic sister chromatid cohesion
+NEDD8 activating enzyme activity
+ligase activity
+NEDD8 transferase activity
+endomitotic cell cycle
+pyruvate metabolic process
+dihydrolipoyllysine-residue acetyltransferase activity
+pyruvate dehydrogenase complex
+acetyl-CoA biosynthetic process from pyruvate
+tricarboxylic acid cycle
+glucose metabolic process
+pyruvate dehydrogenase (NAD+) activity
+attachment of spindle microtubules to kinetochore
+tRNA pseudouridine synthesis
+tRNA pseudouridine(55) synthase activity
+primary miRNA processing
+primary miRNA binding
+small GTPase binding
+cell migration
+cellular response to starvation
+axon guidance
+centrosome duplication
+neuronal cell body
+VCB complex
+transcription initiation-coupled chromatin remodeling
+adenosine deaminase activity
+double-stranded RNA adenosine deaminase activity
+hydrolase activity
+regulatory ncRNA-mediated gene silencing
+response to virus
+double-stranded RNA binding
+positive regulation of viral genome replication
+negative regulation of protein kinase activity by regulation of protein phosphorylation
+response to interferon-alpha
+supraspliceosomal complex
+base conversion or substitution editing
+pre-miRNA processing
+RISC complex assembly
+tRNA-specific adenosine deaminase activity
+somatic diversification of immune receptors via somatic mutation
+adenosine to inosine editing
+miRNA processing
+definitive hemopoiesis
+hepatocyte apoptotic process
+cellular response to virus
+negative regulation of post-transcriptional gene silencing by regulatory ncRNA
+negative regulation of hepatocyte apoptotic process
+rRNA binding
+rRNA methyltransferase activity
+cellular response to glucose stimulus
+protein-containing complex binding
+neurogenesis
+transcription coregulator activity
+sperm DNA condensation
+cellular response to glucose starvation
+neural tube development
+positive regulation of regulatory T cell differentiation
+NuA4 histone acetyltransferase complex
+peptide 2-hydroxyisobutyryltransferase activity
+peptide crotonyltransferase activity
+positive regulation of myoblast differentiation
+positive regulation of double-strand break repair via homologous recombination
+phospholipase binding
+lipid droplet disassembly
+positive regulation of circadian rhythm
+Swr1 complex
+positive regulation of triglyceride biosynthetic process
+histone H2A acetyltransferase activity
+histone H2AK5 acetyltransferase activity
+histone H4K16 acetyltransferase activity
+peptide butyryltransferase activity
+DNA-binding transcription factor binding
+"DNA damage response, signal transduction by p53 class mediator resulting in transcription of p21 class mediator"
+negative regulation of interleukin-2 production
+positive regulation of protein acetylation
+positive regulation of aggrephagy
+negative regulation of double-strand break repair via homologous recombination
+piccolo histone acetyltransferase complex
+MSL complex
+regulation of chromatin organization
+NAD+ binding
+protein-malonyllysine demalonylase activity
+protein-succinyllysine desuccinylase activity
+NAD-dependent protein lysine deacetylase activity
+protein-glutaryllysine deglutarylase activity
+mitochondrial intermembrane space
+protein methylation
+protein-arginine N-methyltransferase activity
+peptidyl-arginine methylation
+protein-arginine omega-N symmetric methyltransferase activity
+spliceosomal snRNP assembly
+genomic imprinting
+histone methyltransferase activity
+protein-arginine omega-N monomethyltransferase activity
+histone H4R3 methyltransferase activity
+histone H4 methyltransferase activity
+ribonucleoprotein complex binding
+fibrillar center
+iron-sulfur cluster binding
+"4 iron, 4 sulfur cluster binding"
+tRNA uridine(34) acetyltransferase activity
+tRNA wobble uridine modification
+central nervous system development
+tRNA wobble base 5-methoxycarbonylmethyl-2-thiouridinylation
+elongator holoenzyme complex
+phosphorylase kinase regulator activity
+histone H4K20 methyltransferase activity
+histone H4K20 monomethyltransferase activity
+histone H4K20me methyltransferase activity
+S-adenosyl-L-methionine binding
+positive regulation of isotype switching
+negative regulation of smooth muscle cell differentiation
+protein desumoylation
+presynaptic cytosol
+postsynaptic cytosol
+SUMO-specific endopeptidase activity
+protein modification by small protein removal
+regulation of spindle assembly
+regulation of kinetochore assembly
+myotube cell development
+cellular response to dexamethasone stimulus
+histone H3K4 trimethyltransferase activity
+establishment of protein localization
+positive regulation of peptidyl-serine phosphorylation
+RNA polymerase II intronic transcription regulatory region sequence-specific DNA binding
+histone H3K36 dimethyltransferase activity
+RNA polymerase II complex binding
+deacetylase activity
+histone deacetylase complex
+macroautophagy
+histone deacetylase activity
+epigenetic regulation of gene expression
+acetylputrescine deacetylase activity
+acetylspermidine deacetylase activity
+positive regulation of mismatch repair
+polyamine deacetylation
+spermidine deacetylation
+oligodendrocyte development
+regulation of cell population proliferation
+histone H3K36 demethylase activity
+histone H3K4 demethylase activity
+peptidyl-histidine dioxygenase activity
+IkappaB kinase activity
+transferrin receptor binding
+skeletal muscle contraction
+canonical NF-kappaB signal transduction
+response to toxic substance
+response to acetate
+positive regulation of interferon-alpha production
+response to hydroperoxide
+tumor necrosis factor-mediated signaling pathway
+toll-like receptor 4 signaling pathway
+non-canonical NF-kappaB signal transduction
+positive regulation of canonical NF-kappaB signal transduction
+response to amino acid
+striated muscle cell differentiation
+response to cholecystokinin
+IkappaB kinase complex
+Set1C/COMPASS complex
+histone H3K4 methyltransferase activity
+histone H3K4 monomethyltransferase activity
+embryo implantation
+inactivation of paternal X chromosome by genomic imprinting
+cell morphogenesis
+homeostasis of number of cells within a tissue
+RNA polymerase II transcription regulatory region sequence-specific DNA binding
+fertilization
+histone methyltransferase binding
+"DNA-binding transcription repressor activity, RNA polymerase II-specific"
+fibroblast growth factor receptor signaling pathway
+cell fate specification
+inner cell mass cell fate commitment
+germ cell development
+germ-line stem cell population maintenance
+negative regulation of fibroblast growth factor receptor signaling pathway
+methyltransferase regulator activity
+positive regulation of flagellated sperm motility
+positive regulation of stem cell population maintenance
+protein homooligomerization
+protein-arginine omega-N asymmetric methyltransferase activity
+cytoplasmic side of plasma membrane
+regulation of modification of postsynaptic actin cytoskeleton
+postsynapse
+DNA-binding transcription factor activity
+protein dimerization activity
+"DNA-binding transcription factor activity, RNA polymerase II-specific"
+circadian rhythm
+E-box binding
+positive regulation of NF-kappaB transcription factor activity
+CLOCK-BMAL transcription complex
+"DNA-binding transcription activator activity, RNA polymerase II-specific"
+regulation of hair cycle
+positive regulation of inflammatory response
+regulation of insulin secretion
+response to redox state
+regulation of type B pancreatic cell development
+negative regulation of glucocorticoid receptor signaling pathway
+perichromatin fibrils
+positive regulation of stem cell proliferation
+stem cell proliferation
+positive regulation of neural precursor cell proliferation
+regulation of erythrocyte differentiation
+histone methyltransferase complex
+subtelomeric heterochromatin formation
+histone H4K12 acetyltransferase activity
+deSUMOylase activity
+iron ion binding
+tRNA(Phe) (7-(3-amino-3-carboxypropyl)wyosine37-C2)-hydroxylase activity
+wybutosine biosynthetic process
+unmethylated CpG binding
+negative regulation of transcription by competitive promoter binding
+histone H3K4me/H3K4me2/H3K4me3 demethylase activity
+histone H3K36me/H3K36me2 demethylase activity
+negative regulation of osteoblast differentiation
+protein demethylase activity
+post-embryonic development
+cellular response to transforming growth factor beta stimulus
+anterior/posterior pattern specification
+fibroblast proliferation
+lysine-acetylated histone binding
+MLL1 complex
+response to light stimulus
+cognition
+negative regulation of fibroblast proliferation
+embryonic hemopoiesis
+exploration behavior
+protein-cysteine methyltransferase activity
+regulation of short-term neuronal synaptic plasticity
+protein de-ADP-ribosylation
+ADP-ribosylarginine hydrolase activity
+extracellular space
+"hydrolase activity, hydrolyzing N-glycosyl compounds"
+potassium ion binding
+protein-lysine N-methyltransferase activity
+histone H3K36 methyltransferase activity
+peptidyl-lysine monomethylation
+peptidyl-lysine dimethylation
+"regulation of DNA damage response, signal transduction by p53 class mediator"
+peptidyl-lysine methylation
+stem cell differentiation
+NF-kappaB binding
+oxidoreductase activity
+epigenetic programing of female pronucleus
+flavin adenine dinucleotide binding
+FAD-dependent H3K4me/H3K4me3 demethylase activity
+FAD binding
+NAD+ ADP-ribosyltransferase activity
+nucleotidyltransferase activity
+NAD+-protein ADP-ribosyltransferase activity
+translesion synthesis
+NAD+- protein-lysine ADP-ribosyltransferase activity
+regulation of fat cell differentiation
+cell projection
+microtubule binding
+dendrite
+perikaryon
+actin filament organization
+actin binding
+regulation of establishment of protein localization
+axon cytoplasm
+protein-containing complex disassembly
+beta-tubulin binding
+negative regulation of microtubule depolymerization
+collateral sprouting
+tau protein binding
+dendritic spine morphogenesis
+erythrocyte enucleation
+aggresome assembly
+tubulin deacetylase activity
+ubiquitin-dependent protein catabolic process via the multivesicular body sorting pathway
+beta-catenin binding
+polyubiquitin modification-dependent protein binding
+protein lysine deacetylase activity
+alpha-tubulin binding
+Hsp90 protein binding
+dynein complex binding
+intracellular protein transport
+positive regulation of epithelial cell migration
+regulation of mitochondrion organization
+negative regulation of neuron projection development
+axonal transport of mitochondrion
+negative regulation of protein-containing complex assembly
+lysosome localization
+peptidyl-lysine deacetylation
+response to immobilization stress
+cellular response to topologically incorrect protein
+negative regulation of protein-containing complex disassembly
+negative regulation of proteolysis
+negative regulation of axon extension involved in axon guidance
+positive regulation of dendrite morphogenesis
+response to corticosterone
+mitochondrion localization
+response to misfolded protein
+"positive regulation of synaptic transmission, glutamatergic"
+parkin-mediated stimulation of mitophagy in response to mitochondrial depolarization
+cellular response to hydrogen peroxide
+regulation of microtubule cytoskeleton organization
+polyubiquitinated misfolded protein transport
+response to growth factor
+cellular response to parathyroid hormone stimulus
+response to dexamethasone
+tubulin deacetylation
+positive regulation of tubulin deacetylation
+positive regulation of cellular response to oxidative stress
+negative regulation of protein acetylation
+positive regulation of cholangiocyte proliferation
+negative regulation of aggrephagy
+caveola
+inclusion body
+aggresome
+cell leading edge
+microtubule associated complex
+positive regulation of cell growth involved in cardiac muscle cell development
+extrinsic apoptotic signaling pathway
+poly-ADP-D-ribose binding
+NAD DNA ADP-ribosyltransferase activity
+NAD+-protein-serine ADP-ribosyltransferase activity
+NAD+- protein-aspartate ADP-ribosyltransferase activity
+NAD+-protein-glutamate ADP-ribosyltransferase activity
+poly-ADP-D-ribose modification-dependent protein binding
+DNA ADP-ribosylation
+decidualization
+protein poly-ADP-ribosylation
+protein auto-ADP-ribosylation
+response to oxygen-glucose deprivation
+hippocampal neuron apoptotic process
+homologous chromosome pairing at meiosis
+rRNA transcription
+positive regulation of gluconeogenesis
+NAD-dependent histone H3K18 deacetylase activity
+R-loop processing
+regulation of protein export from nucleus
+protein methyltransferase activity
+protein-propionyllysine depropionylase activity
+protein deacetylation
+negative regulation of phosphatidylinositol 3-kinase/protein kinase B signal transduction
+protein deglutarylation
+protein depropionylation
+regulation of transcription of nucleolar large rRNA by RNA polymerase I
+positive regulation of rRNA processing
+nucleolus organizer region
+regulation of mRNA stability
+regulation of postsynapse assembly
+poly(ADP-ribose) glycohydrolase activity
+negative regulation of necroptotic process
+"hydrolase activity, hydrolyzing O-glycosyl compounds"
+cellular response to superoxide
+O-acetyl-ADP-ribose deacetylase activity
+ADP-ribosylserine hydrolase activity
+peptidyl-serine ADP-deribosylation
+peptidyl-arginine N-methylation
+methyl-CpG binding
+DNA-templated transcription termination
+endothelial cell activation
+negative regulation of cell differentiation
+positive regulation of oligodendrocyte differentiation
+regulation of ERK1 and ERK2 cascade
+Golgi ribbon formation
+positive regulation of adenylate cyclase-inhibiting dopamine receptor signaling pathway
+methylosome
+Wnt signaling pathway
+positive regulation of protein phosphorylation
+fat cell differentiation
+dorsal/ventral axis specification
+regulation of G1/S transition of mitotic cell cycle
+spongiotrophoblast layer development
+trophoblast giant cell differentiation
+regulation of DNA endoreduplication
+negative regulation of type II interferon-mediated signaling pathway
+negative regulation of tyrosine phosphorylation of STAT protein
+positive regulation of interleukin-4-mediated signaling pathway
+positive regulation of type II interferon-mediated signaling pathway
+ADP-D-ribose binding
+NAD+-protein-C-terminal glycine ADP-ribosyltransferase activity
+regulation of response to type II interferon
+NAD binding
+negative regulation of insulin secretion
+negative regulation of cardiac muscle cell apoptotic process
+glutamine metabolic process
+negative regulation of fatty acid oxidation
+tricarboxylic acid metabolic process
+positive regulation of lipid biosynthetic process
+NAD+- protein-cysteine ADP-ribosyltransferase activity
+mitochondrial inner membrane
+lipoamidase activity
+NAD-dependent protein lipoamidase activity
+NAD-dependent protein biotinidase activity
+regulation of glutamine family amino acid metabolic process
+cellular response to hypoxia
+negative regulation of protein processing involved in protein targeting to mitochondrion
+regulation of pyruvate dehydrogenase activity
+negative regulation of programmed cell death
+negative regulation of JNK cascade
+histone arginine N-methyltransferase activity
+histone H3R2 methyltransferase activity
+histone H2AR3 methyltransferase activity
+histone H3 methyltransferase activity
+histone H3K9 methyltransferase activity
+histone H3K27 methyltransferase activity
+synaptonemal complex assembly
+histone H3K9me2 methyltransferase activity
+neuron fate specification
+promoter-specific chromatin binding
+C2H2 zinc finger domain binding
+oocyte development
+DNA methylation-dependent heterochromatin formation
+organ growth
+behavioral response to cocaine
+long-term memory
+cellular response to cocaine
+negative regulation of autophagosome assembly
+phenotypic switching
+histone H3K56 methyltransferase activity
+regulation of protein modification process
+response to nutrient levels
+response to ethanol
+response to fungicide
+cellular response to xenobiotic stimulus
+response to alcohol
+hypothalamus cell differentiation
+GABAergic neuron differentiation
+protein glycosylation
+lipid binding
+protein processing
+protein O-linked glycosylation
+negative regulation of non-canonical inflammasome complex assembly
+peptide binding
+GABA-ergic synapse
+positive regulation of cold-induced thermogenesis
+"phosphatidylinositol-3,4,5-trisphosphate binding"
+negative regulation of stem cell population maintenance
+Sin3-type complex
+histone acetyltransferase complex
+NSL complex
+regulation of glycolytic process
+positive regulation of cell size
+intracellular distribution of mitochondria
+negative regulation of peptidyl-serine phosphorylation
+regulation of synapse assembly
+regulation of neurotransmitter receptor localization to postsynaptic specialization membrane
+glucosamine metabolic process
+positive regulation of reactive oxygen species biosynthetic process
+zymogen granule
+negative regulation of peptidyl-threonine phosphorylation
+negative regulation of protein targeting to membrane
+negative regulation of cellular response to hypoxia
+regulation of gluconeogenesis
+positive regulation of proteolysis
+cerebellar granule cell to Purkinje cell synapse
+protein O-acetylglucosaminyltransferase activity
+mitophagy
+positive regulation of transcription from RNA polymerase II promoter by glucose
+response to insulin
+regulation of Rac protein signal transduction
+regulation of insulin receptor signaling pathway
+protein N-acetylglucosaminyltransferase complex
+ribosome binding
+modified amino acid binding
+negative regulation of retinoic acid biosynthetic process
+inflammatory response
+negative regulation of inflammatory response
+transcription by RNA polymerase II
+single fertilization
+protein-containing complex organization
+bicellular tight junction
+negative regulation of MAPK cascade
+histone H3K9 monomethyltransferase activity
+flagellated sperm motility
+histone H3K36 trimethyltransferase activity
+uterus morphogenesis
+negative regulation of acute inflammatory response
+sebaceous gland development
+tarsal gland development
+uterine gland development
+skeletal muscle cell differentiation
+positive regulation of myotube differentiation
+NAD-dependent histone deacetylase activity
+aerobic respiration
+protein metabolic process
+stem cell development
+angiogenesis
+embryonic organ development
+embryonic cranial skeleton morphogenesis
+mismatch repair
+vasculogenesis
+transcription elongation by RNA polymerase II
+neural tube closure
+forebrain development
+embryonic placenta morphogenesis
+morphogenesis of a branching structure
+cell migration involved in vasculogenesis
+mesoderm morphogenesis
+pericardium development
+coronary vasculature morphogenesis
+response to metal ion
+regulation of double-strand break repair via homologous recombination
+response to organic cyclic compound
+peptidyl-lysine trimethylation
+response to type I interferon
+response to alkaloid
+positive regulation of ossification
+microtubule cytoskeleton organization involved in mitosis
+regulation of protein localization to chromatin
+DNA (cytosine-5-)-methyltransferase activity
+cellular response to amino acid stimulus
+lncRNA binding
+female germ cell nucleus
+S-adenosylmethionine metabolic process
+nuclear estrogen receptor binding
+replication fork
+epigenetic programming of gene expression
+cellular response to bisphenol A
+germ cell nucleus
+chromosomal DNA methylation maintenance following DNA replication
+DNA-methyltransferase activity
+"DNA (cytosine-5-)-methyltransferase activity, acting on CpG substrates"
+positive regulation of vascular associated smooth muscle cell proliferation
+negative regulation of vascular associated smooth muscle cell apoptotic process
+negative regulation of vascular associated smooth muscle cell differentiation involved in phenotypic switching
+MLL1/2 complex
+central nervous system projection neuron axonogenesis
+corticospinal tract morphogenesis
+corpus callosum morphogenesis
+histone H3-K14 acetyltransferase complex
+natural killer cell differentiation
+T cell differentiation
+positive regulation of hematopoietic stem cell proliferation
+histone H3K14 acetyltransferase activity
+histone H4K5 acetyltransferase activity
+histone H4K8 acetyltransferase activity
+regulation of DNA biosynthetic process
+internal peptidyl-lysine acetylation
+regulation of DNA-templated DNA replication initiation
+"positive regulation of DNA-templated transcription, elongation"
+DNA replication-dependent chromatin disassembly
+embryonic camera-type eye morphogenesis
+midbrain development
+hindbrain development
+histone demethylase activity
+midbrain-hindbrain boundary morphogenesis
+fourth ventricle development
+lateral ventricle development
+third ventricle development
+initiation of neural tube closure
+negative regulation of neural precursor cell proliferation
+PcG protein complex
+regulation of embryonic development
+facultative heterochromatin formation
+nuclear receptor binding
+nuclear receptor coactivator activity
+disordered domain specific binding
+positive regulation of keratinocyte differentiation
+retinoic acid receptor signaling pathway
+vitamin D receptor signaling pathway

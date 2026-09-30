@@ -1,0 +1,3 @@
+"0","ploidy <- read.csv(""data/metadata/meth_pattern_groups.csv"") %>% dplyr::select(-X) %>%"
+"0","  mutate(Sample.ID = as.character(Sample.ID)) "
+"0","head(ploidy)"

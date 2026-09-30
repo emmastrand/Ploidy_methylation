@@ -1,0 +1,5 @@
+"0","## Print duplicate entries "
+"0"," ASV_table_filtered %>%"
+"0","  group_by(ASV_ID, Domain, Kingdom, Phylum, Class, Order, Family, Genus, Species_name) %>%"
+"0","  filter(n() > 1) %>%"
+"0","  ungroup() "

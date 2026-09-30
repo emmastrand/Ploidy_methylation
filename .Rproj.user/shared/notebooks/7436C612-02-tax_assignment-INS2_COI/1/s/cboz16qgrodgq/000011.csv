@@ -1,0 +1,5 @@
+"0","  #write_xlsx(""data/Taxonomic_assignments/Littorinimorpha_testing97.xlsx"")"
+"0","  #write_xlsx(""data/Taxonomic_assignments/Littorinimorpha_testing91.xlsx"")"
+"0",""
+"0","## Checking for double assignments"
+"0","ASV_table_annotated %>% group_by(ASV_ID) %>% count() %>% filter(n>1)"

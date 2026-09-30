@@ -1,0 +1,4 @@
+"0","### protein fasta file "
+"0","fasta_file <- ""data/Pocillopora_acuta_HIv2.genes.pep.faa.gz"""
+"0","protein_sequences <- readAAStringSet(fasta_file)"
+"0","names(protein_sequences) <- sub(""-.*"", """", names(protein_sequences))"
